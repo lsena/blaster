@@ -1,0 +1,21 @@
+boto3
+fastapi
+elasticsearch[async]>=7.0.0,<8.0.0
+# elasticsearch-dsl>=7.0.0,<8.0.0
+uvicorn[standard]
+aiofiles
+redis
+matplotlib
+lz4
+zstandard
+msgpack
+pyvips
+flask
+gunicorn
+gevent
+eventlet
+aiosonic
+uvloop
+requests
+orjson
+numpy
