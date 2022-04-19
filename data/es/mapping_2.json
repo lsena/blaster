@@ -1,0 +1,11 @@
+{
+  "settings": {
+    "number_of_shards": 1
+  },
+  "mappings": {
+    "properties": {
+      "important_field": { "type": "text" },
+      "filter_id": { "type": "integer", "doc_values": true }
+    }
+  }
+}

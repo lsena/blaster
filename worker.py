@@ -1,15 +1,23 @@
 import asyncio
+import itertools
 import json
 import logging
+import os
+import random
+import threading
 import time
 from functools import partial
 from multiprocessing import get_context
+from statistics import mean
 
+import aioboto3
 import uvicorn
 from fastapi import FastAPI, Request
 
-from create_data import Data1Builder
-from elasticsearch_service import get_es_connection
+from builders.es.data1 import Data1Builder
+from builders.es.data2 import Data2Builder
+from builders.es.data3 import Data3Builder
+from builders.vespa.data1 import VespaData1Builder
 from utils import get_settings
 
 app = FastAPI()
@@ -25,19 +33,25 @@ def get_event_loop():
     return loop
 
 
-def start_task_pool(func, idx, **kwargs):
+def start_task_pool(engine, func, idx, **kwargs):
     procs = get_settings().proc_concurrency
     concurrency = kwargs.pop("concurrency", procs)
     slot = f'{idx + 1}'
 
     ts = time.time()
     loop = get_event_loop()
+    lock = asyncio.Lock(loop=loop) # FIXME: this is just wrong and no locking should be necessary inside the async loop
     results = []
     try:
-        es = get_es_connection()
+        if engine == 'vespa':
+            from db.vespa_service import get_connection
+            conn = get_connection(get_settings().cluster_settings.connection_string)
+        else:
+            from db.elasticsearch_service import get_connection
+            conn = get_connection(get_settings().cluster_settings.connection_string)
         results = loop.run_until_complete(
             asyncio.gather(
-                *[func(slot, es, **kwargs) for _ in range(concurrency)]
+                *[func(slot, subslot, concurrency, conn, lock=lock, **kwargs) for subslot in range(concurrency)]
             )
         )
     except Exception as ex:
@@ -46,7 +60,17 @@ def start_task_pool(func, idx, **kwargs):
     return results
 
 
-async def start_processors(max_proc, repeat, func, **kwargs):
+def init_worker_process(engine):
+    random.seed(os.getpid())
+    if engine == 'vespa':
+        from db.vespa_service import get_connection
+        get_connection(get_settings().cluster_settings.connection_string)
+    else:
+        from db.elasticsearch_service import get_connection
+        get_connection(get_settings().cluster_settings.connection_string)
+
+
+async def start_processors(engine, max_proc, repeat, func, **kwargs):
     """
     plan: use ProcessorPool to use all cpus + assign chunks of work
     each chunk of work inside is done by async workers inside processor main thread
@@ -57,61 +81,124 @@ async def start_processors(max_proc, repeat, func, **kwargs):
     task_repeat = repeat if repeat else max_workers
 
     logging.info(f"STARTING WITH N_WORKERS: {max_workers}, REPEAT: {task_repeat}")
-    with get_context("spawn").Pool(initializer=get_es_connection, processes=max_workers) as pool:
-        result = pool.map(partial(start_task_pool, func, **kwargs), range(task_repeat))
-
+    with get_context("spawn").Pool(initializer=partial(init_worker_process, engine), processes=max_workers) as pool:
+        result = pool.map(partial(start_task_pool, engine, func, **kwargs), range(task_repeat))
+        print(result)
+    print(result) # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
     logging.info("worker pool terminated")
+    return mean(itertools.chain(*result))
 
 
 # , settings: Settings = Depends(get_settings)
-@app.post("/read-queue")
-async def read_queue(request: Request):
-    """
-    """
+async def process_sqs_msg(msg):
+    if not msg:
+        return
+    try:
+        if 'TopicArn' in msg and 'Message' in msg:
+            message = msg['Message']
+        else:
+            message = msg
 
+        cmd = message['cmd']  # search,index,create
+        cmd_args = None
+        try:
+            cmd_args = json.loads(message['cmd_args'])  # {'doc_nb': 1000}
+        except:
+            pass
+        max_workers = message['max_workers']  # -1,2,3,...
+        concurrency = message.get('concurrency', get_settings().proc_concurrency) # how many coroutines
+        engine = message.get('engine', 'es')  # es, vespa, ...
+        profile = message['profile']  # '1'
+        repeat = message.get('repeat', None)  # 1
+
+        func = None
+        # TODO: Automated discovery of profiles
+        if engine == 'es':
+            if profile == '1':
+                index_name = 'index1'
+                builder = await Data1Builder.new(index=index_name)
+            elif profile == '2':
+                index_name = 'index2'
+                builder = await Data2Builder.new(index=index_name)
+            elif profile == '3':
+                index_name = 'index3'
+                builder = await Data3Builder.new(index=index_name)
+            else:
+                return
+        elif engine == 'vespa':
+            index_name = 'ecom'
+            builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vector_mappings_queries.zip')
+        else:
+            return
+
+        if cmd == 'build_data':
+            func = builder.build_data_repo
+        elif cmd == 'create_index':
+            func = builder.create_index
+            concurrency = 1
+        elif cmd == 'index_docs':
+            func = builder.index_docs
+        elif cmd == 'search':
+            func = builder.run_queries
+        result = await start_processors(engine, max_workers, repeat, func, concurrency=concurrency, **cmd_args)
+
+        response = result, 200
+    except Exception as ex:
+        logging.exception('Error processing message: %s' % ex)
+        response = ex, 500
+
+    return response
+
+
+@app.post("/cmd")
+async def cmd(request: Request):
+    # "cmd_args": "{\"query_nb\": 100, \"full_text_search\": 1, \"keyword_search\": 1, \"filter_search\": 1, \"nested_search\": 1, \"geopoint_search\": 1}",
     body = await request.json()
     if body is None:
         # Expect application/json request
         response = "", 415
     else:
-        try:
-            if 'TopicArn' in body and 'Message' in body:
-                message = body['Message']
-            else:
-                message = body
-
-            cmd = message['cmd']  # search,index,create
-            cmd_args = None
-            try:
-                cmd_args = json.loads(message['cmd_args'])  # {'doc_nb': 1000}
-            except:
-                pass
-            max_workers = message['max_workers']  # -1,2,3,...
-            profile = message['profile']  # '1'
-            repeat = message.get('repeat', None)  # 1
-
-            func = None
-            concurrency = get_settings().proc_concurrency
-            if profile == '1':
-                builder = await Data1Builder.new(index='index1')
-                if cmd == 'build_data':
-                    func = builder.build_data_repo
-                elif cmd == 'create_index':
-                    func = builder.create_index
-                    concurrency = 1
-                elif cmd == 'index_docs':
-                    func = builder.index_docs
-                elif cmd == 'search':
-                    func = builder.run_queries
-                await start_processors(max_workers, repeat, func, concurrency=concurrency, **cmd_args)
-
-            response = "", 200
-        except Exception as ex:
-            logging.exception('Error processing message: %s' % ex)
-            response = ex, 500
+        response = await process_sqs_msg(body)
 
     return response
 
 
+async def poll_sqs_queue():
+    # Create SQS client
+    sqs = aioboto3.client('sqs')
+
+    queue_url = get_settings().sqs_queue_url
+
+    while True:
+        # Receive message from SQS queue
+        response = sqs.receive_message(
+            QueueUrl=queue_url,
+            AttributeNames=[
+                'SentTimestamp'
+            ],
+            MaxNumberOfMessages=1,
+            MessageAttributeNames=[
+                'All'
+            ],
+            VisibilityTimeout=400_000,
+            WaitTimeSeconds=10
+        )
+
+        message = response['Messages'][0]
+
+        receipt_handle = message['ReceiptHandle']
+        await process_sqs_msg(message)
+        # Delete received message from queue
+        sqs.delete_message(
+            QueueUrl=queue_url,
+            ReceiptHandle=receipt_handle
+        )
+        logging.info('Received and deleted message: %s' % message)
+
+
 if __name__ == "__main__":
+    poll_thread = threading.Thread(target=poll_sqs_queue)
+    logging.info(f"READING FROM QUEUE: {get_settings().sqs_queue_url}")
+    poll_thread.start()
+
     uvicorn.run(app, host="0.0.0.0", port=5000)

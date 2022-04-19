@@ -1,0 +1,51 @@
+version: "3"
+
+services:
+  vespa0:
+    image: vespaengine/vespa:latest
+    hostname: vespa-container0
+    privileged: true
+    environment:
+      VESPA_CONFIGSERVERS: vespa-container0,vespa-container1,vespa-container2
+    volumes:
+      - ./data:/data
+      - ./deploy:/deploy
+      - ./sample-apps:/sample-apps
+      - ./docs:/docs
+    ports:
+      - 8080:8080
+      - 19050:19050
+      - 19071:19071
+      - 19112:19112
+  vespa1:
+    image: vespaengine/vespa:latest
+    hostname: vespa-container1
+    privileged: true
+    environment:
+      VESPA_CONFIGSERVERS: vespa-container0,vespa-container1,vespa-container2
+    volumes:
+      - ./data:/data
+      - ./deploy:/deploy
+      - ./sample-apps:/sample-apps
+      - ./docs:/docs
+    ports:
+      - 8081:8080
+      - 19051:19050
+      - 19072:19071
+      - 19113:19112
+  vespa2:
+    image: vespaengine/vespa:latest
+    hostname: vespa-container2
+    privileged: true
+    environment:
+      VESPA_CONFIGSERVERS: vespa-container0,vespa-container1,vespa-container2
+    volumes:
+      - ./data:/data
+      - ./deploy:/deploy
+      - ./sample-apps:/sample-apps
+      - ./docs:/docs
+    ports:
+      - 8082:8080
+      - 19052:19050
+      - 19073:19071
+      - 19114:19112

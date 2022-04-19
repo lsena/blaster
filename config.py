@@ -5,6 +5,7 @@ import os
 
 class ClusterSettings(BaseSettings):
     app_name: str = "Blaster"
+    connection_string: str = os.getenv('CONN', "es:9200")
 
 
 class IndexSettings(BaseSettings):
@@ -25,9 +26,10 @@ class ClientSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    app_name: str = "Awesome API"
+    app_name: str = "Blaster"
+    sqs_queue_url: str = os.getenv('SQS_QUEUE_URL')
     num_proc = os.cpu_count() - 1
-    proc_concurrency = 5
+    proc_concurrency = 1
     num_docs = 100
     cluster_settings = ClusterSettings()
     index_settings = IndexSettings()

@@ -2,7 +2,7 @@ from elasticsearch import AsyncElasticsearch
 from elasticsearch._async import helpers
 
 es = None
-def get_es_connection(hosts='es'):
+def get_connection(hosts='es') -> AsyncElasticsearch:
     global es
     if not es:
         es = AsyncElasticsearch(hosts, maxsize=10, http_compress=True)

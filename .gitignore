@@ -14,5 +14,7 @@
 
 ._*
 
-data/docs/
-data/logs/
+data/es/docs/
+data/es/logs/
+data/vespa/
+local.py

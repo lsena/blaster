@@ -1,4 +1,3 @@
-import base64
 import datetime
 import json
 import os
@@ -6,89 +5,11 @@ import random
 import time
 import uuid
 
-import aiofiles
-
-from elasticsearch_service import ElasticsearchService
+from builders.es.es_data_service import ElasticsearchDataService
 
 
-class CreateDataService():
-    colors = ['amber', 'blue', 'brown', 'gray', 'green', 'hazel', 'red']
-    mapping_path = None
-
-    def __init__(self, index):
-        self.index = index
-
-    @classmethod
-    async def new(cls, index):
-        self = cls(index)
-        await self.load_seed_text()
-        return self
-
-    def generate_random_base64(self, size):
-        return base64.urlsafe_b64encode(os.urandom(size)).decode('utf-8').replace('=', '')
-
-    async def generate_id(self, format='uuid4'):
-        # TODO: lucene friendly formats
-        ts = int(time.time_ns() / 1000)
-        return f"{str(ts)}{self.generate_random_base64(3)}"
-
-    async def read_file(self, file_path):
-        async with aiofiles.open(file_path, mode='r') as f:
-            file_contents = await f.read()
-        return file_contents
-
-    async def write_file(self, file_path, contents):
-        async with aiofiles.open(file_path, mode='w') as f:
-            file_contents = await f.write(contents)
-        return file_contents
-
-    async def load_seed_text(self):
-        seed_file = 'data/seed_en.txt'
-        seed_file_words = await self.read_file(seed_file)
-        self.seed_file_words_lst = seed_file_words.split('\n')
-
-    async def get_rnd_txt(self, limit, format):
-        if format == 'string':
-            result = ''
-            for _ in range(limit):
-                result = f'{result} {random.choice(self.seed_file_words_lst)}'
-            return result.strip()
-        else:
-            result = []
-            for _ in range(limit):
-                result.append(random.choice(self.seed_file_words_lst))
-        return result
-
-    async def build_doc_file(self, doc_nb):
-        raise NotImplementedError
-
-    async def create_index(self, slot, es):
-        await ElasticsearchService.create_index(es, self.index, await self.read_file(self.mapping_path))
-
-    async def index_docs(self, slot, es):
-        results = []
-        files = next(os.walk(f'data/docs/{slot}/'), (None, None, []))[2]  # [] if no file
-        # chuncks = [files[i:i + procs] for i in range(0, len(files), procs)]
-        for file in files:
-            actions = await self.read_file(f'data/docs/{slot}/{file}')
-            results.append(await ElasticsearchService.bulk(es, json.loads(actions)))
-        return results
-
-    async def build_query(self, **query_opts):
-        raise NotImplementedError
-
-    async def run_queries(self, slot, es, query_nb, **query_opts):
-        query_latency = []
-        for _ in range(query_nb):
-            body = await self.build_query(**query_opts)
-            ts = time.time_ns()
-            await ElasticsearchService.send_query(es, index=self.index, body=body)
-            query_latency.append(time.time_ns() - ts)
-        return (sum(query_latency) / len(query_latency)) / 1_000_000
-
-
-class Data1Builder(CreateDataService):
-    mapping_path = 'data/mapping_1.json'
+class Data1Builder(ElasticsearchDataService):
+    mapping_path = 'data/es/mapping_1.json'
 
     async def generate_docs(self, idx):
         ts = time.time()
@@ -137,15 +58,13 @@ class Data1Builder(CreateDataService):
         # docs.append(doc_schema)
         # print(time.time() - ts)
 
-    async def build_data_repo(self, slot, es, doc_nb):
-        print(f"BUILDING data repo slot:{slot} doc_nb:{doc_nb}")
+    async def build_data_repo(self, slot, subslot, total_subslots, conn, doc_nb):
         ts = time.time()
         actions = json.dumps([await self.generate_docs(idx) for idx in range(doc_nb)])
         file_name = await self.generate_id()
         # file_slot = hash(file_name) % get_settings()
-        dir_path = f'data/docs/{slot}'
+        dir_path = f'data/es/docs/{slot}'
         os.makedirs(dir_path, exist_ok=True)
-        print(f"WRITING data repo file:{file_name} slot:{slot} doc_nb:{doc_nb}")
         await self.write_file(f'{dir_path}/{file_name}', actions)
 
     async def build_query(self, **query_opts):
