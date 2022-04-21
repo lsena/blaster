@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import time
@@ -11,12 +10,12 @@ from db.vespa_service import VespaService
 
 
 class VespaDataService(DataService):
-    async def create_index(self, slot, subslot, total_subslots, conn, lock):
+    async def create_index(self, slot, subslot, total_subslots, conn):
         await VespaService.open_connection(conn)
         await VespaService.create_index(conn, self.index, await self.read_file(self.mapping_path))
         # await VespaService.close_connection(conn)
 
-    async def index_docs(self, slot, subslot, total_subslots, conn, lock):
+    async def index_docs(self, slot, subslot, total_subslots, conn):
         # results = []
         query_latency = []
         files = next(os.walk(f'data/vespa/docs/{slot}/'), (None, None, []))[2]  # [] if no file
@@ -40,15 +39,15 @@ class VespaDataService(DataService):
     async def load_embeddings(self):
         return
 
-    async def run_queries(self, slot, subslot, total_subslots, conn, query_nb, lock, **query_opts):
-        async with lock:
-            await self.load_embeddings()
+    async def load_queries(self, query_nb, **query_opts):
+        self.queries = []
+        for _ in range(query_nb):
+            self.queries.append(await self.build_query(**query_opts))
+
+    async def run_queries(self, slot, subslot, total_subslots, conn, **query_opts):
         query_latency = []
         await VespaService.open_connection(conn)
-        queries = []
-        for _ in range(query_nb):
-            queries.append(await self.build_query(**query_opts))
-        for query in queries:
+        for query in self.queries:
             ts = time.time_ns()
             await VespaService.send_query(conn, index=self.index, body=query)
             query_latency.append(time.time_ns() - ts)

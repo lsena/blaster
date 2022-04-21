@@ -40,7 +40,6 @@ def start_task_pool(engine, func, idx, **kwargs):
 
     ts = time.time()
     loop = get_event_loop()
-    lock = asyncio.Lock(loop=loop) # FIXME: this is just wrong and no locking should be necessary inside the async loop
     results = []
     try:
         if engine == 'vespa':
@@ -51,7 +50,7 @@ def start_task_pool(engine, func, idx, **kwargs):
             conn = get_connection(get_settings().cluster_settings.connection_string)
         results = loop.run_until_complete(
             asyncio.gather(
-                *[func(slot, subslot, concurrency, conn, lock=lock, **kwargs) for subslot in range(concurrency)]
+                *[func(slot, subslot, concurrency, conn, **kwargs) for subslot in range(concurrency)]
             )
         )
     except Exception as ex:
@@ -60,7 +59,7 @@ def start_task_pool(engine, func, idx, **kwargs):
     return results
 
 
-def init_worker_process(engine):
+def init_worker_process(engine, builder):
     random.seed(os.getpid())
     if engine == 'vespa':
         from db.vespa_service import get_connection
@@ -70,23 +69,27 @@ def init_worker_process(engine):
         get_connection(get_settings().cluster_settings.connection_string)
 
 
-async def start_processors(engine, max_proc, repeat, func, **kwargs):
+async def start_processors(engine, max_proc, repeat, builder, func, **kwargs):
     """
     plan: use ProcessorPool to use all cpus + assign chunks of work
     each chunk of work inside is done by async workers inside processor main thread
     :return:
     """
-
+    await builder.run_init_jobs()
     max_workers = min(get_settings().num_proc, max_proc) if max_proc > 0 else get_settings().num_proc
     task_repeat = repeat if repeat else max_workers
 
     logging.info(f"STARTING WITH N_WORKERS: {max_workers}, REPEAT: {task_repeat}")
-    with get_context("spawn").Pool(initializer=partial(init_worker_process, engine), processes=max_workers) as pool:
+    with get_context("spawn").Pool(initializer=partial(init_worker_process, engine, builder),
+                                   processes=max_workers) as pool:
+        start_ts = time.time()
         result = pool.map(partial(start_task_pool, engine, func, **kwargs), range(task_repeat))
         print(result)
-    print(result) # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
+    total_runtime = time.time() - start_ts
+    print(
+        result)  # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
     logging.info("worker pool terminated")
-    return mean(itertools.chain(*result))
+    return total_runtime, mean(itertools.chain(*result))
 
 
 # , settings: Settings = Depends(get_settings)
@@ -106,7 +109,7 @@ async def process_sqs_msg(msg):
         except:
             pass
         max_workers = message['max_workers']  # -1,2,3,...
-        concurrency = message.get('concurrency', get_settings().proc_concurrency) # how many coroutines
+        concurrency = message.get('concurrency', get_settings().proc_concurrency)  # how many coroutines
         engine = message.get('engine', 'es')  # es, vespa, ...
         profile = message['profile']  # '1'
         repeat = message.get('repeat', None)  # 1
@@ -128,6 +131,8 @@ async def process_sqs_msg(msg):
         elif engine == 'vespa':
             index_name = 'ecom'
             builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vector_mappings_queries.zip')
+            builder.add_init_job(builder.load_embeddings)
+            builder.add_init_job(partial(builder.load_queries, **cmd_args))
         else:
             return
 
@@ -140,7 +145,16 @@ async def process_sqs_msg(msg):
             func = builder.index_docs
         elif cmd == 'search':
             func = builder.run_queries
-        result = await start_processors(engine, max_workers, repeat, func, concurrency=concurrency, **cmd_args)
+        total_runtime, mean_latency = await start_processors(engine, max_workers, repeat, builder, func,
+                                                             concurrency=concurrency, **cmd_args)
+        result = {
+            "mean_latency": mean_latency,
+        }
+        if 'query_nb' in cmd_args:
+            total_queries = min(max_workers, repeat) * concurrency * cmd_args['query_nb']
+            result['total_queries'] = total_queries
+            result['total_runtime'] = total_runtime
+            result['queries_per_second'] = total_queries / (total_runtime)
 
         response = result, 200
     except Exception as ex:

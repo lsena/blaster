@@ -13,12 +13,21 @@ class DataService():
     def __init__(self, index, data_file: str = None):
         self.index = index
         self.data_file = data_file
+        self.init_jobs = []
+        self.queries = []
 
     @classmethod
     async def new(cls, index, data_file: str = None):
         self = cls(index, data_file)
         await self.load_seed_text()
         return self
+
+    async def run_init_jobs(self):
+        for job_func in self.init_jobs:
+            await job_func()
+
+    def add_init_job(self, job_func):
+        self.init_jobs.append(job_func)
 
     def generate_random_base64(self, size):
         return base64.urlsafe_b64encode(os.urandom(size)).decode('utf-8').replace('=', '')
@@ -58,14 +67,14 @@ class DataService():
     async def build_doc_file(self, doc_nb):
         raise NotImplementedError
 
-    async def create_index(self, slot, subslot, total_subslots, conn, lock):
+    async def create_index(self, slot, subslot, total_subslots, conn):
         raise NotImplementedError
 
-    async def index_docs(self, slot, subslot, total_subslots, conn, lock):
+    async def index_docs(self, slot, subslot, total_subslots, conn):
         raise NotImplementedError
 
     async def build_query(self, **query_opts):
         raise NotImplementedError
 
-    async def run_queries(self, slot, subslot, total_subslots, conn, query_nb, lock, **query_opts):
+    async def run_queries(self, slot, subslot, total_subslots, conn, **query_opts):
         raise NotImplementedError
