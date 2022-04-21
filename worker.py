@@ -131,8 +131,6 @@ async def process_sqs_msg(msg):
         elif engine == 'vespa':
             index_name = 'ecom'
             builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vectors.zip')
-            builder.add_init_job(builder.load_embeddings)
-            builder.add_init_job(partial(builder.load_queries, **cmd_args))
         else:
             return
 
@@ -145,6 +143,8 @@ async def process_sqs_msg(msg):
             func = builder.index_docs
         elif cmd == 'search':
             func = builder.run_queries
+            builder.add_init_job(builder.load_embeddings)
+            builder.add_init_job(partial(builder.load_queries, **cmd_args))
         total_runtime, mean_latency = await start_processors(engine, max_workers, repeat, builder, func,
                                                              concurrency=concurrency, **cmd_args)
         result = {
