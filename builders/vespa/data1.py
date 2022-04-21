@@ -13,23 +13,6 @@ from builders.vespa.vespa_data_service import VespaDataService
 class VespaData1Builder(VespaDataService):
     mapping_path = 'data/vespa/mapping_1.json'
 
-    # def __init__(self, index):
-    #     super().__init__(index)
-    #     query_embeddings_file = 'data/query_embeddings.txt'
-    #     seed_file = await self.read_file(query_embeddings_file)
-    #     self.query_embeddings_lst = seed_file.split('\n')
-
-    def buf_count_newlines_gen(self, fname):
-        def _make_gen(reader):
-            while True:
-                b = reader(2 ** 16)
-                if not b: break
-                yield b
-
-        with open(fname, "rb") as f:
-            count = sum(buf.count(b"\n") for buf in _make_gen(f.raw.read))
-        return count
-
     async def generate_docs(self, idx):
         if self.data_file.endswith('.zip'):
             with zipfile.ZipFile(self.data_file, 'r') as zip_ref:
@@ -88,7 +71,7 @@ class VespaData1Builder(VespaDataService):
         #     with zipfile.ZipFile(self.data_file, 'r') as zip_ref:
         #         zip_ref.extractall('data/vespa')
         if not hasattr(self, 'query_embeddings_lst'):
-            async with aiofiles.open('data/vespa/tmp/vector_mappings_main.json', mode='r') as f:
+            async with aiofiles.open('data/vespa/queries.json', mode='r') as f:
                 self.query_embeddings_lst = []
                 async for line in f:
                     self.query_embeddings_lst.append(orjson.loads(line))

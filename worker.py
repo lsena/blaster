@@ -130,7 +130,7 @@ async def process_sqs_msg(msg):
                 return
         elif engine == 'vespa':
             index_name = 'ecom'
-            builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vector_mappings_queries.zip')
+            builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vectors.zip')
             builder.add_init_job(builder.load_embeddings)
             builder.add_init_job(partial(builder.load_queries, **cmd_args))
         else:
