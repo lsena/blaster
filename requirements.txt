@@ -24,3 +24,4 @@ pyroaring
 msgpack
 pyvespa
 orjson
+azure-storage-blob

@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+import time
 import zipfile
 from contextlib import AsyncExitStack
 
@@ -35,10 +36,9 @@ class VespaData1Builder(VespaDataService):
 
             async with aiofiles.open('data/vespa/tmp/vector_mappings_main.json', mode='r') as f:
 
-                for slot in range(total_slots):
-                    await file_handlers[slot].write('[')
-                    # file_handlers[slot].flush()
-                not_first_line = [False] * total_slots
+                # for slot in range(total_slots):
+                #     await file_handlers[slot].write('[')
+                # not_first_line = [False] * total_slots
                 async for line in f:
                     tmp = {}
                     tmp['fields'] = orjson.loads(line)
@@ -49,22 +49,26 @@ class VespaData1Builder(VespaDataService):
                     }
                     del tmp['fields']['id']
                     current_slot = idx % total_slots
-                    if not_first_line[current_slot]:
-                        tmpstr = f",{orjson.dumps(tmp).decode('utf-8')}"
-                    else:
-                        tmpstr = orjson.dumps(tmp).decode('utf-8')
-                        not_first_line[current_slot] = True
-                    await file_handlers[current_slot].write(tmpstr)
+                    # if not_first_line[current_slot]:
+                    #     tmpstr = f",{orjson.dumps(tmp).decode('utf-8')}"
+                    # else:
+                    #     tmpstr = orjson.dumps(tmp).decode('utf-8')
+                    #     not_first_line[current_slot] = True
+                    await file_handlers[current_slot].write(orjson.dumps(tmp).decode('utf-8'))
+                    await file_handlers[current_slot].write('\n')
                     idx += 1
 
-                for slot in range(total_slots):
-                    await file_handlers[slot].write(']')
+                # for slot in range(total_slots):
+                #     await file_handlers[slot].write(']')
 
     async def build_data_repo(self, slot, subslot, total_subslots, es, doc_nb):
         # FIXME: this is just a hack to break the file into slots for multiprocessing queries
         if slot and int(slot) != 1:
             return
+
+        ts = time.time_ns()
         await self.generate_docs(None)
+        return (time.time_ns() - ts) / 1_000_000
 
     async def load_embeddings(self):
         # if self.data_file.endswith('.zip'):

@@ -25,10 +25,20 @@ class VespaDataService(DataService):
             logging.warning("subslot greater than number of chunks")
             return []
         await VespaService.open_connection(conn)
+        ts = time.time_ns()
         for file in chunks[subslot]:
-            actions = await self.read_file(f'data/vespa/docs/{slot}/{file}')
-            ts = time.time_ns()
-            await VespaService.bulk(conn, self.index, orjson.loads(actions))
+            buffer = []
+            async for line in self.read_from_file(f'data/vespa/docs/{slot}/{file}'):
+                buffer.append(orjson.loads(line))
+                if len(buffer) > 1000:
+                    await VespaService.bulk(conn, self.index, buffer)
+                    buffer = []
+            if buffer:
+                await VespaService.bulk(conn, self.index, buffer)
+
+            # actions = await self.read_file(f'data/vespa/docs/{slot}/{file}')
+
+            # await VespaService.bulk(conn, self.index, orjson.loads(actions))
             query_latency.append(time.time_ns() - ts)
         # await VespaService.close_connection(conn)
         return mean(query_latency) / 1_000_000

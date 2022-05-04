@@ -42,6 +42,11 @@ class DataService():
             file_contents = await f.read()
         return file_contents
 
+    async def read_from_file(self, file_path):
+        async with aiofiles.open(file_path, mode='r') as f:
+            async for line in f:
+                yield line
+
     async def write_file(self, file_path, contents):
         async with aiofiles.open(file_path, mode='w') as f:
             file_contents = await f.write(contents)

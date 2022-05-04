@@ -12,6 +12,7 @@ from statistics import mean
 
 import aioboto3
 import uvicorn
+from azure.storage.blob import BlobServiceClient
 from fastapi import FastAPI, Request
 
 from builders.es.data1 import Data1Builder
@@ -135,6 +136,22 @@ async def process_sqs_msg(msg):
             return
 
         if cmd == 'build_data':
+            data_url = message.get('data_url', None)  # blob://container_name/filename.ext
+            if data_url:
+                # FIXME: hacky
+                import regex as re
+                result = re.search(r"(.*):\/\/(.*)\/(.*)", data_url)
+                # provider = result.group(0) only supports azure blob storage for now
+                container = result.group(1)
+                filename = result.group(2)
+                connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+                blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+                blob_client = blob_service_client.get_blob_client(container=container, blob=filename)
+
+                download_file_path = f'data/vespa/{filename}'
+                with open(download_file_path, "wb") as download_file:
+                    download_file.write(blob_client.download_blob().readall())
+
             func = builder.build_data_repo
         elif cmd == 'create_index':
             func = builder.create_index
