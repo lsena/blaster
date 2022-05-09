@@ -4,6 +4,7 @@ import random
 import time
 
 import aiofiles
+import orjson
 
 
 class DataService():
@@ -83,3 +84,10 @@ class DataService():
 
     async def run_queries(self, slot, subslot, total_subslots, conn, **query_opts):
         raise NotImplementedError
+
+    async def load_embeddings(self):
+        if not hasattr(self, 'query_embeddings_lst'):
+            async with aiofiles.open('data/queries.json', mode='r') as f:
+                self.query_embeddings_lst = []
+                async for line in f:
+                    self.query_embeddings_lst.append(orjson.loads(line))

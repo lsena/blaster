@@ -10,7 +10,7 @@ import msgpack
 from builders.es.es_data_service import ElasticsearchDataService
 
 
-class Data3Builder(ElasticsearchDataService):
+class ElasticsearchData3Builder(ElasticsearchDataService):
     mapping_path = 'data/es/mapping_3.json'
 
     async def generate_docs(self, idx):

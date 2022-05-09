@@ -8,7 +8,7 @@ import uuid
 from builders.es.es_data_service import ElasticsearchDataService
 
 
-class Data1Builder(ElasticsearchDataService):
+class ElasticsearchData1Builder(ElasticsearchDataService):
     mapping_path = 'data/es/mapping_1.json'
 
     async def generate_docs(self, idx):

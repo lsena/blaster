@@ -46,9 +46,6 @@ class VespaDataService(DataService):
     async def build_query(self, **query_opts):
         raise NotImplementedError
 
-    async def load_embeddings(self):
-        return
-
     async def load_queries(self, query_nb, **query_opts):
         self.queries = []
         for _ in range(query_nb):

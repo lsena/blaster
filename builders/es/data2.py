@@ -10,7 +10,7 @@ from pyroaring import BitMap
 from builders.es.es_data_service import ElasticsearchDataService
 
 
-class Data2Builder(ElasticsearchDataService):
+class ElasticsearchData2Builder(ElasticsearchDataService):
     mapping_path = 'data/es/mapping_2.json'
 
     async def generate_docs(self, idx):

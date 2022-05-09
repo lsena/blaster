@@ -1,96 +1,20 @@
-import asyncio
-import itertools
 import json
 import logging
-import os
-import random
 import threading
-import time
 from functools import partial
-from multiprocessing import get_context
-from statistics import mean
 
-import aioboto3
 import uvicorn
-from azure.storage.blob import BlobServiceClient
 from fastapi import FastAPI, Request
 
-from builders.es.data1 import Data1Builder
-from builders.es.data2 import Data2Builder
-from builders.es.data3 import Data3Builder
+from builders.es.data1 import ElasticsearchData1Builder
+from builders.es.data2 import ElasticsearchData2Builder
+from builders.es.data3 import ElasticsearchData3Builder
+from builders.es.data4 import ElasticsearchData4Builder
 from builders.vespa.data1 import VespaData1Builder
-from utils import get_settings
+from processor import start_processors
+from utils import get_settings, download_remote_data, poll_sqs_queue
 
 app = FastAPI()
-
-loop = None
-
-
-def get_event_loop():
-    global loop
-    if not loop:
-        loop = asyncio.get_event_loop_policy().new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
-
-
-def start_task_pool(engine, func, idx, **kwargs):
-    procs = get_settings().proc_concurrency
-    concurrency = kwargs.pop("concurrency", procs)
-    slot = f'{idx + 1}'
-
-    ts = time.time()
-    loop = get_event_loop()
-    results = []
-    try:
-        if engine == 'vespa':
-            from db.vespa_service import get_connection
-            conn = get_connection(get_settings().cluster_settings.connection_string)
-        else:
-            from db.elasticsearch_service import get_connection
-            conn = get_connection(get_settings().cluster_settings.connection_string)
-        results = loop.run_until_complete(
-            asyncio.gather(
-                *[func(slot, subslot, concurrency, conn, **kwargs) for subslot in range(concurrency)]
-            )
-        )
-    except Exception as ex:
-        logging.exception(ex)
-    logging.info(f"ASYNC POOL OPERATION TIME: {time.time() - ts}")
-    return results
-
-
-def init_worker_process(engine, builder):
-    random.seed(os.getpid())
-    if engine == 'vespa':
-        from db.vespa_service import get_connection
-        get_connection(get_settings().cluster_settings.connection_string)
-    else:
-        from db.elasticsearch_service import get_connection
-        get_connection(get_settings().cluster_settings.connection_string)
-
-
-async def start_processors(engine, max_proc, repeat, builder, func, **kwargs):
-    """
-    plan: use ProcessorPool to use all cpus + assign chunks of work
-    each chunk of work inside is done by async workers inside processor main thread
-    :return:
-    """
-    await builder.run_init_jobs()
-    max_workers = min(get_settings().num_proc, max_proc) if max_proc > 0 else get_settings().num_proc
-    task_repeat = repeat if repeat else max_workers
-
-    logging.info(f"STARTING WITH N_WORKERS: {max_workers}, REPEAT: {task_repeat}")
-    with get_context("spawn").Pool(initializer=partial(init_worker_process, engine, builder),
-                                   processes=max_workers) as pool:
-        start_ts = time.time()
-        result = pool.map(partial(start_task_pool, engine, func, **kwargs), range(task_repeat))
-        print(result)
-    total_runtime = time.time() - start_ts
-    print(
-        result)  # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
-    logging.info("worker pool terminated")
-    return total_runtime, mean(itertools.chain(*result))
 
 
 # , settings: Settings = Depends(get_settings)
@@ -120,13 +44,16 @@ async def process_sqs_msg(msg):
         if engine == 'es':
             if profile == '1':
                 index_name = 'index1'
-                builder = await Data1Builder.new(index=index_name)
+                builder = await ElasticsearchData1Builder.new(index=index_name)
             elif profile == '2':
                 index_name = 'index2'
-                builder = await Data2Builder.new(index=index_name)
+                builder = await ElasticsearchData2Builder.new(index=index_name)
             elif profile == '3':
                 index_name = 'index3'
-                builder = await Data3Builder.new(index=index_name)
+                builder = await ElasticsearchData3Builder.new(index=index_name)
+            elif profile == '4':
+                index_name = 'index4'
+                builder = await ElasticsearchData4Builder.new(index=index_name, data_file='data/vespa/vectors.zip')
             else:
                 return
         elif engine == 'vespa':
@@ -137,20 +64,11 @@ async def process_sqs_msg(msg):
 
         if cmd == 'build_data':
             data_url = message.get('data_url', None)  # blob://container_name/filename.ext
+            queries_url = message.get('queries_url', None)  # blob://container_name/filename.ext
             if data_url:
-                # FIXME: hacky
-                import regex as re
-                result = re.search(r"(.*):\/\/(.*)\/(.*)", data_url)
-                # provider = result.group(0) only supports azure blob storage for now
-                container = result.group(1)
-                filename = result.group(2)
-                connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-                blob_service_client = BlobServiceClient.from_connection_string(connect_str)
-                blob_client = blob_service_client.get_blob_client(container=container, blob=filename)
-
-                download_file_path = f'data/vespa/{filename}'
-                with open(download_file_path, "wb") as download_file:
-                    download_file.write(blob_client.download_blob().readall())
+                download_remote_data(data_url)
+            if queries_url:
+                download_remote_data(queries_url)
 
             func = builder.build_data_repo
         elif cmd == 'create_index':
@@ -194,36 +112,11 @@ async def cmd(request: Request):
     return response
 
 
-async def poll_sqs_queue():
-    # Create SQS client
-    sqs = aioboto3.client('sqs')
-
-    queue_url = get_settings().sqs_queue_url
-
-    while True:
-        # Receive message from SQS queue
-        response = sqs.receive_message(
-            QueueUrl=queue_url,
-            AttributeNames=[
-                'SentTimestamp'
-            ],
-            MaxNumberOfMessages=1,
-            MessageAttributeNames=[
-                'All'
-            ],
-            VisibilityTimeout=400_000,
-            WaitTimeSeconds=10
-        )
-
-        message = response['Messages'][0]
-
-        receipt_handle = message['ReceiptHandle']
+async def red_msgs():
+    message = await poll_sqs_queue()
+    while message:
         await process_sqs_msg(message)
-        # Delete received message from queue
-        sqs.delete_message(
-            QueueUrl=queue_url,
-            ReceiptHandle=receipt_handle
-        )
+        message = await poll_sqs_queue()
         logging.info('Received and deleted message: %s' % message)
 
 

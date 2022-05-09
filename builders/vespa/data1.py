@@ -70,16 +70,6 @@ class VespaData1Builder(VespaDataService):
         await self.generate_docs(None)
         return (time.time_ns() - ts) / 1_000_000
 
-    async def load_embeddings(self):
-        # if self.data_file.endswith('.zip'):
-        #     with zipfile.ZipFile(self.data_file, 'r') as zip_ref:
-        #         zip_ref.extractall('data/vespa')
-        if not hasattr(self, 'query_embeddings_lst'):
-            async with aiofiles.open('data/vespa/queries.json', mode='r') as f:
-                self.query_embeddings_lst = []
-                async for line in f:
-                    self.query_embeddings_lst.append(orjson.loads(line))
-
     async def build_query(self, **query_opts):
         # id, title, description, imUrl, brands [str], embedding [float]
 

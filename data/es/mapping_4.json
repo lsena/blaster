@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "number_of_shards": 1
+  },
+  "mappings": {
+    "properties": {
+      "id": { "type": "text" },
+      "title": { "type": "text" },
+      "description": { "type": "text" },
+      "imgUrl": { "type": "keyword" },
+      "brands": { "type": "keyword" },
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 768
+      },
+      "stock_size_10": { "type": "integer", "doc_values": true }
+    }
+  }
+}
