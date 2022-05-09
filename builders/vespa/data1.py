@@ -63,7 +63,7 @@ class VespaData1Builder(VespaDataService):
 
     async def build_data_repo(self, slot, subslot, total_subslots, es, doc_nb):
         # FIXME: this is just a hack to break the file into slots for multiprocessing queries
-        if slot and int(slot) != 1:
+        if slot and int(slot) != 0:
             return
 
         ts = time.time_ns()

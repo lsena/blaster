@@ -77,4 +77,5 @@ async def start_processors(engine, max_proc, repeat, builder, func, **kwargs):
     print(
         result)  # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
     logging.info("worker pool terminated")
-    return total_runtime, mean(itertools.chain(*result))
+    mean_ts = mean(itertools.chain(*result)) if result and result[0] else 0
+    return total_runtime, mean_ts
