@@ -40,27 +40,18 @@ async def process_sqs_msg(msg):
         repeat = message.get('repeat', None)  # 1
 
         func = None
-        # TODO: Automated discovery of profiles
-        if engine == 'es':
-            if profile == '1':
-                index_name = 'index1'
-                builder = await ElasticsearchData1Builder.new(index=index_name)
-            elif profile == '2':
-                index_name = 'index2'
-                builder = await ElasticsearchData2Builder.new(index=index_name)
-            elif profile == '3':
-                index_name = 'index3'
-                builder = await ElasticsearchData3Builder.new(index=index_name)
-            elif profile == '4':
-                index_name = 'index4'
-                builder = await ElasticsearchData4Builder.new(index=index_name, data_file='data/vespa/vectors.zip')
-            else:
-                return
-        elif engine == 'vespa':
-            index_name = 'ecom'
-            builder = await VespaData1Builder.new(index=index_name, data_file='data/vespa/vectors.zip')
-        else:
+        profiles = {
+            'es_1': ElasticsearchData1Builder.new(index='index1'),
+            'es_2': ElasticsearchData1Builder.new(index='index2'),
+            'es_3': ElasticsearchData1Builder.new(index='index3'),
+            'es_4': ElasticsearchData1Builder.new(index='index4', data_file='data/vespa/vectors.zip'),
+            'vespa_1': VespaData1Builder.new(index='ecom', data_file='data/vespa/vectors.zip'),
+        }
+        builder = profiles.get(f'{engine}_{profile}', None)
+        if not builder:
             return
+        else:
+            builder = await builder
 
         if cmd == 'build_data':
             data_url = message.get('data_url', None)  # blob://container_name/filename.ext

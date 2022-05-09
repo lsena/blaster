@@ -24,7 +24,7 @@ def get_event_loop():
 def start_task_pool(engine, func, idx, **kwargs):
     procs = get_settings().proc_concurrency
     concurrency = kwargs.pop("concurrency", procs)
-    slot = f'{idx + 1}'
+    slot = f'{idx}'
 
     ts = time.time()
     loop = get_event_loop()
