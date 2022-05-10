@@ -42,9 +42,9 @@ async def process_sqs_msg(msg):
         func = None
         profiles = {
             'es_1': ElasticsearchData1Builder.new(index='index1'),
-            'es_2': ElasticsearchData1Builder.new(index='index2'),
-            'es_3': ElasticsearchData1Builder.new(index='index3'),
-            'es_4': ElasticsearchData1Builder.new(index='index4', data_file='data/vespa/vectors.zip'),
+            'es_2': ElasticsearchData2Builder.new(index='index2'),
+            'es_3': ElasticsearchData3Builder.new(index='index3'),
+            'es_4': ElasticsearchData4Builder.new(index='index4', data_file='data/vespa/vectors.zip'),
             'vespa_1': VespaData1Builder.new(index='ecom', data_file='data/vespa/vectors.zip'),
         }
         builder = profiles.get(f'{engine}_{profile}', None)
