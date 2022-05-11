@@ -34,10 +34,11 @@ async def process_sqs_msg(msg):
         except:
             pass
         max_workers = message['max_workers']  # -1,2,3,...
+        max_workers = min(get_settings().num_proc, max_workers) if max_workers > 0 else get_settings().num_proc
         concurrency = message.get('concurrency', get_settings().proc_concurrency)  # how many coroutines
         engine = message.get('engine', 'es')  # es, vespa, ...
         profile = message['profile']  # '1'
-        repeat = message.get('repeat', None)  # 1
+        # repeat = message.get('repeat', None)  # 1
 
         func = None
         profiles = {
@@ -71,13 +72,14 @@ async def process_sqs_msg(msg):
             func = builder.run_queries
             builder.add_init_job(builder.load_embeddings)
             builder.add_init_job(partial(builder.load_queries, **cmd_args))
-        total_runtime, mean_latency = await start_processors(engine, max_workers, repeat, builder, func,
+        total_runtime, mean_latency = await start_processors(engine, max_workers, builder, func,
                                                              concurrency=concurrency, **cmd_args)
         result = {
             "mean_latency": mean_latency,
         }
         if 'query_nb' in cmd_args:
-            total_queries = min(max_workers, repeat) * concurrency * cmd_args['query_nb']
+            # total_queries = min(max_workers, repeat) * concurrency * cmd_args['query_nb']
+            total_queries = max_workers * concurrency * cmd_args['query_nb']
             result['total_queries'] = total_queries
             result['total_runtime'] = total_runtime
             result['queries_per_second'] = total_queries / (total_runtime)

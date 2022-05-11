@@ -25,9 +25,9 @@ def download_from_blob_storage(container, filename):
 
 def download_remote_data(url):
     result = re.search(r"(.*):\/\/(.*)\/(.*)", url)
-    provider = result.group(0)
-    container = result.group(1)
-    filename = result.group(2)
+    provider = result.group(1)
+    container = result.group(2)
+    filename = result.group(3)
     if provider == 'blob':
         download_from_blob_storage(container, filename)
 

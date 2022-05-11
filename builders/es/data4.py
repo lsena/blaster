@@ -60,7 +60,7 @@ class ElasticsearchData4Builder(ElasticsearchDataService):
 
     async def build_data_repo(self, slot, subslot, total_subslots, es, doc_nb):
         # FIXME: this is just a hack to break the file into slots for multiprocessing queries
-        if slot and int(slot) != 1:
+        if slot and int(slot) != 0:
             return
 
         ts = time.time_ns()
@@ -71,8 +71,12 @@ class ElasticsearchData4Builder(ElasticsearchDataService):
         embedding = random.choice(self.query_embeddings_lst)['embedding']
         query = {
             "size": 10,
+            "_source": False,
             "query": {
                 "script_score": {
+                    "query": {
+                        "match_all": {}
+                    },
                     # "query": {
                     #     "bool": {
                     #         "filter": {
@@ -83,7 +87,7 @@ class ElasticsearchData4Builder(ElasticsearchDataService):
                     #     }
                     # },
                     "script": {
-                        "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
+                        "source": "l2norm(params.query_vector, 'embedding') + 1.0",
                         "params": {
                             "query_vector": embedding
                         }
