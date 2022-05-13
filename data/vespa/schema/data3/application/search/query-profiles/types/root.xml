@@ -1,0 +1,3 @@
+<query-profile-type id="root">
+        <field name="ranking.features.query(query_embedding)" type="tensor&lt;float&gt;(d0[768])" />
+</query-profile-type>

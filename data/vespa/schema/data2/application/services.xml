@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root. -->
+<services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
+
+    <admin version='2.0'>
+        <adminserver hostalias="vespa0"/>
+        <configservers>
+            <configserver hostalias="vespa0"/>
+            <configserver hostalias="vespa1"/>
+            <configserver hostalias="vespa2"/>
+        </configservers>
+        <cluster-controllers>
+            <cluster-controller hostalias="vespa0"/>
+            <cluster-controller hostalias="vespa1"/>
+            <cluster-controller hostalias="vespa2"/>
+        </cluster-controllers>
+    </admin>
+
+    <container id="default" version="1.0">
+        <!--<jvm options="-Xms32M -Xmx512M"/>-->
+        <document-api/>
+        <search/>
+        <nodes>
+            <node hostalias="vespa0"/>
+            <node hostalias="vespa1"/>
+            <node hostalias="vespa2"/>
+        </nodes>
+        <http>
+            <server id="default" port="8080"/>
+            <server id="ingress" port="8443">
+                <ssl>
+                    <private-key-file>/var/tls/host.key</private-key-file>
+                    <certificate-file>/var/tls/host.pem</certificate-file>
+                    <ca-certificates-file>/var/tls/ca-client.pem</ca-certificates-file>
+                    <client-authentication>need</client-authentication>
+                </ssl>
+            </server>
+        </http>
+    </container>
+
+    <content id="ecom" version="1.0">
+        <redundancy>3</redundancy>
+        <engine>
+            <proton>
+                <searchable-copies>3</searchable-copies>
+            </proton>
+        </engine>
+        <documents>
+            <document type="ecom" mode="index"/>
+        </documents>
+        <nodes>
+            <node hostalias="vespa0" distribution-key="0"/>
+            <node hostalias="vespa1" distribution-key="1"/>
+            <node hostalias="vespa2" distribution-key="2"/>
+        </nodes>
+    </content>
+
+</services>

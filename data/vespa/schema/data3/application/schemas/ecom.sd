@@ -1,0 +1,48 @@
+schema ecom {
+    document ecom {
+        field id type string {
+            indexing: summary | attribute
+            attribute {
+                fast-search
+            }
+        }
+        field title type string {
+            indexing: index
+            index: enable-bm25
+        }
+        field description type string {
+            indexing: summary
+        }
+        field imUrl type string {
+            indexing: attribute
+        }
+        field brands type array<string> {
+            indexing: index | attribute
+        }
+        field stock_size_10 type int {
+            indexing: index | attribute
+            attribute {
+                fast-search
+            }
+        }
+        field embedding type tensor<float>(d0[768]) {
+            indexing: attribute | index
+            attribute {
+                distance-metric: angular
+            }
+        }
+    }
+    document-summary id {
+        summary id type string { source: id}
+    }
+    rank-profile semantic inherits default {
+        first-phase {
+            expression: closeness(field, embedding)
+        }
+    }
+    rank-profile hybrid {
+        first-phase {
+            expression: 1.7*bm25(title) + 1.9*closeness(field, embedding)
+        }
+    }
+}

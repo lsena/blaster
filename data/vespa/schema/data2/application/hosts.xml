@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root. -->
+<hosts>
+  <host name="vespa0">
+    <alias>vespa0</alias>
+  </host>
+  <host name="vespa1">
+    <alias>vespa1</alias>
+  </host>
+  <host name="vespa2">
+    <alias>vespa2</alias>
+  </host>
+</hosts>
