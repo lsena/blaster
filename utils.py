@@ -18,7 +18,8 @@ def download_from_blob_storage(container, filename):
     blob_service_client = BlobServiceClient.from_connection_string(connect_str)
     blob_client = blob_service_client.get_blob_client(container=container, blob=filename)
 
-    download_file_path = f'data/vespa/{filename}'
+    download_file_path = f'{get_settings().tmp_data_folder}/{filename}'
+    os.makedirs(f'{get_settings().tmp_data_folder}/', exist_ok=True)
     with open(download_file_path, "wb") as download_file:
         download_file.write(blob_client.download_blob().readall())
 

@@ -9,21 +9,22 @@ import aiofiles
 import orjson
 
 from builders.es.es_data_service import ElasticsearchDataService
+from utils import get_settings
 
 
 class ElasticsearchData4Builder(ElasticsearchDataService):
-    mapping_path = 'data/es/mapping_4.json'
+    mapping_path = f'{get_settings().static_data_folder}/es/mapping_4.json'
 
     async def generate_docs(self, idx):
         if self.data_file.endswith('.zip'):
             with zipfile.ZipFile(self.data_file, 'r') as zip_ref:
-                zip_ref.extractall('data/es')
+                zip_ref.extractall(f'{get_settings().tmp_data_folder}/es')
 
         total_slots = 4
         idx = 0
 
         for slot in range(total_slots):
-            dir_path = f'data/es/docs/{slot}'
+            dir_path = f'{get_settings().tmp_data_folder}/es/docs/{slot}'
             try:
                 shutil.rmtree(dir_path)
             except:
@@ -31,10 +32,10 @@ class ElasticsearchData4Builder(ElasticsearchDataService):
             os.makedirs(dir_path, exist_ok=True)
 
         async with AsyncExitStack() as stack:
-            file_handlers = [await stack.enter_async_context(aiofiles.open(f'data/es/docs/{slot}/docs', mode='w'))
+            file_handlers = [await stack.enter_async_context(aiofiles.open(f'{get_settings().tmp_data_folder}/es/docs/{slot}/docs', mode='w'))
                              for slot in range(total_slots)]
 
-            async with aiofiles.open('data/es/tmp/vector_mappings_main.json', mode='r') as f:
+            async with aiofiles.open(f'{get_settings().tmp_data_folder}/es/tmp/vector_mappings_main.json', mode='r') as f:
                 # for slot in range(total_slots):
                 #     await file_handlers[slot].write('[')
                 # not_first_line = [False] * total_slots

@@ -6,6 +6,8 @@ import time
 import aiofiles
 import orjson
 
+from utils import get_settings
+
 
 class DataService():
     colors = ['amber', 'blue', 'brown', 'gray', 'green', 'hazel', 'red']
@@ -54,7 +56,7 @@ class DataService():
         return file_contents
 
     async def load_seed_text(self):
-        seed_file = 'data/seed_en.txt'
+        seed_file = f'{get_settings().static_data_folder}/seed_en.txt'
         seed_file_words = await self.read_file(seed_file)
         self.seed_file_words_lst = seed_file_words.split('\n')
 
@@ -87,7 +89,7 @@ class DataService():
 
     async def load_embeddings(self):
         if not hasattr(self, 'query_embeddings_lst'):
-            async with aiofiles.open('data/queries.json', mode='r') as f:
+            async with aiofiles.open(f'{get_settings().tmp_data_folder}/queries.json', mode='r') as f:
                 self.query_embeddings_lst = []
                 async for line in f:
                     self.query_embeddings_lst.append(orjson.loads(line))

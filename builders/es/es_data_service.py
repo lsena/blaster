@@ -8,6 +8,7 @@ import orjson
 
 from builders.data_service import DataService
 from db.elasticsearch_service import ElasticsearchService
+from utils import get_settings
 
 
 class ElasticsearchDataService(DataService):
@@ -18,7 +19,7 @@ class ElasticsearchDataService(DataService):
     async def index_docs(self, slot, subslot, total_subslots, conn):
         # results = []
         query_latency = []
-        files = next(os.walk(f'data/vespa/docs/{slot}/'), (None, None, []))[2]  # [] if no file
+        files = next(os.walk(f'{get_settings().tmp_data_folder}/vespa/docs/{slot}/'), (None, None, []))[2]  # [] if no file
         # TODO: this can break when we have very few files
         chunks = [files[i:i + total_subslots] for i in range(0, len(files), total_subslots)]
         if subslot >= len(chunks):
@@ -27,7 +28,7 @@ class ElasticsearchDataService(DataService):
         ts = time.time_ns()
         for file in chunks[subslot]:
             buffer = []
-            async for line in self.read_from_file(f'data/es/docs/{slot}/{file}'):
+            async for line in self.read_from_file(f'{get_settings().tmp_data_folder}/es/docs/{slot}/{file}'):
                 buffer.append(orjson.loads(line))
                 if len(buffer) > 1000:
                     await ElasticsearchService.bulk(conn, buffer)

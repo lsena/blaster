@@ -6,10 +6,11 @@ import time
 import uuid
 
 from builders.es.es_data_service import ElasticsearchDataService
+from utils import get_settings
 
 
 class ElasticsearchData1Builder(ElasticsearchDataService):
-    mapping_path = 'data/es/mapping_1.json'
+    mapping_path = f'{get_settings().static_data_folder}/es/mapping_1.json'
 
     async def generate_docs(self, idx):
         ts = time.time()
@@ -63,7 +64,7 @@ class ElasticsearchData1Builder(ElasticsearchDataService):
         actions = json.dumps([await self.generate_docs(idx) for idx in range(doc_nb)])
         file_name = await self.generate_id()
         # file_slot = hash(file_name) % get_settings()
-        dir_path = f'data/es/docs/{slot}'
+        dir_path = f'{get_settings().tmp_data_folder}/es/docs/{slot}'
         os.makedirs(dir_path, exist_ok=True)
         await self.write_file(f'{dir_path}/{file_name}', actions)
 

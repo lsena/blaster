@@ -9,21 +9,22 @@ import aiofiles
 import orjson
 
 from builders.vespa.vespa_data_service import VespaDataService
+from utils import get_settings
 
 
 class VespaData1Builder(VespaDataService):
-    mapping_path = 'data/vespa/mapping_1.json'
+    mapping_path = f'{get_settings().static_data_folder}/vespa/mapping_1.json'
 
     async def generate_docs(self, idx):
         if self.data_file.endswith('.zip'):
             with zipfile.ZipFile(self.data_file, 'r') as zip_ref:
-                zip_ref.extractall('data/vespa')
+                zip_ref.extractall(f'{get_settings().tmp_data_folder}')
 
         total_slots = 4
         idx = 0
 
         for slot in range(total_slots):
-            dir_path = f'data/vespa/docs/{slot}'
+            dir_path = f'{get_settings().tmp_data_folder}/vespa/docs/{slot}'
             try:
                 shutil.rmtree(dir_path)
             except:
@@ -31,10 +32,10 @@ class VespaData1Builder(VespaDataService):
             os.makedirs(dir_path, exist_ok=True)
 
         async with AsyncExitStack() as stack:
-            file_handlers = [await stack.enter_async_context(aiofiles.open(f'data/vespa/docs/{slot}/docs', mode='w'))
+            file_handlers = [await stack.enter_async_context(aiofiles.open(f'{get_settings().tmp_data_folder}/vespa/docs/{slot}/docs', mode='w'))
                              for slot in range(total_slots)]
 
-            async with aiofiles.open('data/vespa/tmp/vector_mappings_main.json', mode='r') as f:
+            async with aiofiles.open(f'{get_settings().tmp_data_folder}/tmp/vector_mappings_main.json', mode='r') as f:
 
                 # for slot in range(total_slots):
                 #     await file_handlers[slot].write('[')
@@ -82,12 +83,13 @@ class VespaData1Builder(VespaDataService):
             free_text_str = ''
             free_text_query = " or ([{'targetHits': 10}]weakAnd(productDisplayName contains '" + free_text_str + "')) )"
         embedding = random.choice(self.query_embeddings_lst)['embedding']
-        yql = f"select id from sources {self.index} where ([{{'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding)) {qfilter};"
+        yql = f"select id from sources {self.index} where ([{{'approximate':false, 'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding)) {qfilter};"
         query = {
             "yql": yql,
             "hits": page_size,
             "presentation.timing": True,
-            "ranking.features.query(query_embedding)": str(embedding),
+            'presentation.summary': 'id',
+            "ranking.features.query(query_embedding)": embedding,
             "ranking.profile": "semantic"
         }
 

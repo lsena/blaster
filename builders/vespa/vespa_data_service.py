@@ -7,6 +7,7 @@ import orjson
 
 from builders.data_service import DataService
 from db.vespa_service import VespaService
+from utils import get_settings
 
 
 class VespaDataService(DataService):
@@ -18,7 +19,7 @@ class VespaDataService(DataService):
     async def index_docs(self, slot, subslot, total_subslots, conn):
         # results = []
         query_latency = []
-        files = next(os.walk(f'data/vespa/docs/{slot}/'), (None, None, []))[2]  # [] if no file
+        files = next(os.walk(f'{get_settings().tmp_data_folder}/vespa/docs/{slot}/'), (None, None, []))[2]  # [] if no file
         # TODO: this can break when we have very few files
         chunks = [files[i:i + total_subslots] for i in range(0, len(files), total_subslots)]
         if subslot >= len(chunks):
@@ -28,7 +29,7 @@ class VespaDataService(DataService):
         ts = time.time_ns()
         for file in chunks[subslot]:
             buffer = []
-            async for line in self.read_from_file(f'data/vespa/docs/{slot}/{file}'):
+            async for line in self.read_from_file(f'{get_settings().tmp_data_folder}/vespa/docs/{slot}/{file}'):
                 buffer.append(orjson.loads(line))
                 if len(buffer) > 1000:
                     await VespaService.bulk(conn, self.index, buffer)
@@ -56,7 +57,8 @@ class VespaDataService(DataService):
         await VespaService.open_connection(conn)
         for query in self.queries:
             ts = time.time_ns()
-            await VespaService.send_query(conn, index=self.index, body=query)
-            query_latency.append(time.time_ns() - ts)
+            result = await VespaService.send_query(conn, index=self.index, body=query)
+            # query_latency.append(time.time_ns() - ts)
+            query_latency.append(result.json['timing']['querytime']*1000)
         # return average (is ms) of all queries for each asyncio task
         return mean(query_latency) / 1_000_000

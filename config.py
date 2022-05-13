@@ -9,12 +9,12 @@ class ClusterSettings(BaseSettings):
 
 
 class IndexSettings(BaseSettings):
-    refresh_interval = 60 # seconds
+    refresh_interval = 60  # seconds
     replica_number = 3
-    buffer_size = 1024 # MB
-    translog_sync_interval = 5000 # ms
-    translog_durability = 'async' # request/async
-    translog_flush_threshold_size = 1024 # MB
+    buffer_size = 1024  # MB
+    translog_sync_interval = 5000  # ms
+    translog_durability = 'async'  # request/async
+    translog_flush_threshold_size = 1024  # MB
 
 
 class DocSettings(BaseSettings):
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     cluster_settings = ClusterSettings()
     index_settings = IndexSettings()
     doc_settings = DocSettings()
+    tmp_data_folder = '/tmpdir'
+    static_data_folder = 'data'
 
 
 settings = Settings()
