@@ -83,7 +83,7 @@ async def process_sqs_msg(msg):
             result['total_queries'] = total_queries
             result['total_runtime'] = total_runtime
             result['queries_per_second'] = total_queries / (total_runtime)
-
+        logging.info(result)
         response = result, 200
     except Exception as ex:
         logging.exception('Error processing message: %s' % ex)
