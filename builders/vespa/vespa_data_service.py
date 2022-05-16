@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import time
 from statistics import mean
 
@@ -13,7 +14,18 @@ from utils import get_settings
 class VespaDataService(DataService):
     async def create_index(self, slot, subslot, total_subslots, conn):
         await VespaService.open_connection(conn)
-        await VespaService.create_index(conn, self.index, await self.read_file(self.mapping_path))
+        dest_path = f'{get_settings().tmp_data_folder}/application'
+        ext = 'zip'
+        shutil.make_archive(
+            base_name=f'{dest_path}',
+            format=ext,
+            root_dir=self.mapping_path,
+            base_dir='.'
+        )
+        resp = await VespaService.create_index(conn, self.index, f'{dest_path}.{ext}')
+        logging.info(resp.status_code, resp.text)
+        os.remove(f'{dest_path}.{ext}')
+        return 0
         # await VespaService.close_connection(conn)
 
     async def index_docs(self, slot, subslot, total_subslots, conn):

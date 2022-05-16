@@ -16,5 +16,5 @@
 
 data/es/docs/
 data/es/logs/
-data/vespa/
+data/vespa/docs/
 local.py

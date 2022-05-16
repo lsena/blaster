@@ -25,3 +25,4 @@ msgpack
 pyvespa
 orjson
 azure-storage-blob
+requests

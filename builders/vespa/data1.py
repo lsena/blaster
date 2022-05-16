@@ -13,7 +13,7 @@ from utils import get_settings
 
 
 class VespaData1Builder(VespaDataService):
-    mapping_path = f'{get_settings().static_data_folder}/vespa/mapping_1.json'
+    mapping_path = f'{get_settings().static_data_folder}/vespa/schema/data1/application'
 
     async def generate_docs(self, idx):
         if self.data_file.endswith('.zip'):

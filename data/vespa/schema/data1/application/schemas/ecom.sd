@@ -30,12 +30,6 @@ schema ecom {
             attribute {
                 distance-metric: angular
             }
-            index {
-                hnsw {
-                    max-links-per-node: 32
-                    neighbors-to-explore-at-insert: 500
-                }
-            }
         }
     }
     document-summary id {

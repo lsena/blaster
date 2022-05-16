@@ -100,6 +100,7 @@ async def cmd(request: Request):
         # Expect application/json request
         response = "", 415
     else:
+        logging.info("Received request from remote client, processing...")
         response = await process_sqs_msg(body)
 
     return response

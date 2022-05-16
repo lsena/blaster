@@ -1,4 +1,5 @@
 import logging
+import requests
 
 from vespa.application import Vespa, VespaAsync
 
@@ -37,13 +38,18 @@ class VespaService():
         pass
 
     @classmethod
-    async def create_index(cls, es, index, mapping):
-        try:
-            await es.indices.delete(index=index)
-        except Exception:
-            # TODO: index does not exist error. need to check type
-            pass
-        return await es.indices.create(index=index, body=mapping)
+    async def create_index(cls, conn: VespaAsync, index, mapping):
+        with open(mapping, 'rb') as f:
+            headers = {"Content-Type": "application/zip"}
+            url = f'{get_settings().cluster_settings.connection_string}/application/v2/tenant/default/prepareandactivate'
+            url = url.replace('8080', '19071') # FIXME
+            data = f.read()
+            r = requests.post(
+                url=url,
+                headers=headers,
+                data=data,
+                verify=False)
+            return r
 
     @classmethod
     async def bulk(cls, conn: VespaAsync, schema, actions):
