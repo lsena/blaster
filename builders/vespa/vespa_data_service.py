@@ -70,7 +70,7 @@ class VespaDataService(DataService):
         for query in self.queries:
             ts = time.time_ns()
             result = await VespaService.send_query(conn, index=self.index, body=query)
-            # query_latency.append(time.time_ns() - ts)
-            query_latency.append(result.json['timing']['querytime']*1000)
+            query_latency.append(time.time_ns() - ts)
+            # query_latency.append(result.json['timing']['querytime']*1000)
         # return average (is ms) of all queries for each asyncio task
         return mean(query_latency) / 1_000_000
