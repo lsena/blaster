@@ -28,7 +28,7 @@ class ClientSettings(BaseSettings):
 class Settings(BaseSettings):
     app_name: str = "Blaster"
     sqs_queue_url: str = os.getenv('SQS_QUEUE_URL')
-    num_proc = os.cpu_count() - 1
+    num_proc = os.cpu_count()
     proc_concurrency = 1
     num_docs = 100
     cluster_settings = ClusterSettings()
