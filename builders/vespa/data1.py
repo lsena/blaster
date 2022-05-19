@@ -90,7 +90,9 @@ class VespaData1Builder(VespaDataService):
             "presentation.timing": True,
             'presentation.summary': 'id',
             "ranking.features.query(query_embedding)": embedding,
-            "ranking.profile": "semantic"
+            "ranking.profile": "semantic",
+            "timeout": 2000,
+            "ranking.softtimeout.enable": False
         }
 
         return query

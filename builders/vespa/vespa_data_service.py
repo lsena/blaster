@@ -23,7 +23,7 @@ class VespaDataService(DataService):
             base_dir='.'
         )
         resp = await VespaService.create_index(conn, self.index, f'{dest_path}.{ext}')
-        logging.info(resp.status_code, resp.text)
+        print(resp.status_code, resp.text)
         os.remove(f'{dest_path}.{ext}')
         return 0
         # await VespaService.close_connection(conn)
