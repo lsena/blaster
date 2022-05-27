@@ -8,6 +8,7 @@ from functools import partial
 from multiprocessing import get_context
 from statistics import mean
 
+from builders.data_service import BenchmarkResult
 from utils import get_settings
 
 loop = None
@@ -57,7 +58,7 @@ def init_worker_process(engine, builder):
         get_connection(get_settings().cluster_settings.connection_string)
 
 
-async def start_processors(engine, max_proc, builder, func, **kwargs):
+async def start_processors(engine, max_proc, builder, func, **kwargs) -> BenchmarkResult:
     """
     plan: use ProcessorPool to use all cpus + assign chunks of work
     each chunk of work inside is done by async workers inside processor main thread
@@ -72,10 +73,18 @@ async def start_processors(engine, max_proc, builder, func, **kwargs):
                                    processes=max_workers) as pool:
         start_ts = time.time()
         result = pool.map(partial(start_task_pool, engine, func, **kwargs), range(max_workers))
-        print(result)
     total_runtime = time.time() - start_ts
-    print(
-        result)  # [[47.84888879, 48.020549, 47.360947229999994, 47.131018299999994, 47.39814992], [47.50742029, 47.88334506, 46.89231461, 47.57275019, 48.03460203]]
+    print(result)
     logging.info("worker pool terminated")
-    mean_ts = mean(itertools.chain(*result)) if result and result[0] else 0
-    return total_runtime, mean_ts
+    # if type(result) == tuple:
+    #     result_client = result[0]
+    #     result_server = result[1]
+    # else:
+    #     result_client = result
+    #     result_server = [0]
+    response = None
+    if result and result[0]:
+        response = result[0][0].response
+    mean_ts_client = mean([res.mean_duration_client for res in itertools.chain(*result)]) if result and result[0] else 0
+    mean_ts_server = mean([res.mean_duration_server for res in itertools.chain(*result)]) if result and result[0] else 0
+    return BenchmarkResult(mean_ts_client, mean_ts_server, total_runtime, response=response)

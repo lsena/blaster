@@ -45,7 +45,8 @@ async def process_sqs_msg(msg):
             'es_1': ElasticsearchData1Builder.new(index='index1'),
             'es_2': ElasticsearchData2Builder.new(index='index2'),
             'es_3': ElasticsearchData3Builder.new(index='index3'),
-            'es_4': ElasticsearchData4Builder.new(index='index4', data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
+            'es_4': ElasticsearchData4Builder.new(index='index4',
+                                                  data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
             'vespa_1': VespaData1Builder.new(index='ecom', data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
         }
         builder = profiles.get(f'{engine}_{profile}', None)
@@ -72,17 +73,22 @@ async def process_sqs_msg(msg):
             func = builder.run_queries
             builder.add_init_job(builder.load_embeddings)
             builder.add_init_job(partial(builder.load_queries, **cmd_args))
-        total_runtime, mean_latency = await start_processors(engine, max_workers, builder, func,
-                                                             concurrency=concurrency, **cmd_args)
+        elif cmd == 'get_recall':
+            func = builder.get_recall
+        bench_result = await start_processors(engine, max_workers, builder, func,
+                                              concurrency=concurrency, **cmd_args)
         result = {
-            "mean_latency": mean_latency,
+            "mean_duration_server": bench_result.mean_duration_server,
+            "mean_duration_client": bench_result.mean_duration_client,
         }
         if 'query_nb' in cmd_args:
             # total_queries = min(max_workers, repeat) * concurrency * cmd_args['query_nb']
             total_queries = max_workers * concurrency * cmd_args['query_nb']
             result['total_queries'] = total_queries
-            result['total_runtime'] = total_runtime
-            result['queries_per_second'] = total_queries / (total_runtime)
+            result['total_runtime'] = bench_result.total_duration
+            result['queries_per_second'] = total_queries / (bench_result.total_duration)
+        if bench_result.response:
+            result.update(bench_result.response)
         print(result)
         response = result, 200
     except Exception as ex:

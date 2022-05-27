@@ -6,7 +6,7 @@ from statistics import mean
 
 import orjson
 
-from builders.data_service import DataService
+from builders.data_service import DataService, BenchmarkResult
 from db.elasticsearch_service import ElasticsearchService
 from utils import get_settings
 
@@ -15,6 +15,7 @@ class ElasticsearchDataService(DataService):
 
     async def create_index(self, slot, subslot, total_subslots, conn):
         await ElasticsearchService.create_index(conn, self.index, await self.read_file(self.mapping_path))
+        return BenchmarkResult()
 
     async def index_docs(self, slot, subslot, total_subslots, conn):
         # results = []
@@ -37,7 +38,7 @@ class ElasticsearchDataService(DataService):
                 result = await ElasticsearchService.bulk(conn, buffer)
 
             query_latency.append(time.time_ns() - ts)
-        return mean(query_latency) / 1_000_000
+        return BenchmarkResult(mean(query_latency) / 1_000_000, 0)
 
     async def build_query(self, **query_opts):
         raise NotImplementedError
@@ -49,9 +50,11 @@ class ElasticsearchDataService(DataService):
 
     async def run_queries(self, slot, subslot, total_subslots, conn, query_nb, **query_opts):
         query_latency = []
+        query_latency_from_server = []
         for _ in range(query_nb):
             body = await self.build_query(**query_opts)
             ts = time.time_ns()
             result = await ElasticsearchService.send_query(conn, index=self.index, body=body)
             query_latency.append(time.time_ns() - ts)
-        return (sum(query_latency) / len(query_latency)) / 1_000_000
+            query_latency_from_server.append(result['took'])
+        return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server))

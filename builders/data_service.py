@@ -9,6 +9,21 @@ import orjson
 from utils import get_settings
 
 
+class BenchmarkResult:
+
+    def __init__(self, mean_duration_client=0.0, mean_duration_server=0.0, total_duration=0.0, response=None):
+        self.mean_duration_client = mean_duration_client
+        self.mean_duration_server = mean_duration_server
+        self.total_duration = total_duration
+        self.response = response
+
+    def __str__(self):
+        return f'duration_client: {self.mean_duration_client}, duration_server: {self.mean_duration_server}'
+
+    def __repr__(self):
+        return f'BenchmarkResult("{self.mean_duration_client}, {self.mean_duration_server}")'
+
+
 class DataService():
     colors = ['amber', 'blue', 'brown', 'gray', 'green', 'hazel', 'red']
     mapping_path = None

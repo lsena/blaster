@@ -83,7 +83,8 @@ class VespaData1Builder(VespaDataService):
             free_text_str = ''
             free_text_query = " or ([{'targetHits': 10}]weakAnd(productDisplayName contains '" + free_text_str + "')) )"
         embedding = random.choice(self.query_embeddings_lst)['embedding']
-        yql = f"select id from sources {self.index} where ([{{'approximate':false, 'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding)) {qfilter};"
+        approximate = 'true' if 'approximate' in query_opts else 'false'
+        yql = f"select id from sources {self.index} where ([{{'approximate':{approximate}, 'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding)) {qfilter};"
         query = {
             "yql": yql,
             "hits": page_size,
