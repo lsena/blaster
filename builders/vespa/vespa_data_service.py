@@ -83,17 +83,17 @@ class VespaDataService(DataService):
         results = []
         query_latency = []
         query_latency_from_server = []
-        for _ in range(500):
+        for _ in range(200):
             ts = time.time_ns()
             query = await self.build_query(approximate=False)
             results_exact = await VespaService.send_query(conn, index=self.index, body=query)
             lst_ids_exact = sorted([hit['id'] for hit in results_exact.hits])
-            query['yql'] = query['yql'].replace("'approximate':true", "'approximate':false")
+            query['yql'] = query['yql'].replace("'approximate':false", "'approximate':true")
             results_approx = await VespaService.send_query(conn, index=self.index, body=query)
+            lst_ids_approx = sorted([hit['id'] for hit in results_approx.hits])
             query_latency.append(time.time_ns() - ts)
             query_latency_from_server.append(results_approx.json['timing']['querytime'] * 1000)
 
-            lst_ids_approx = sorted([hit['id'] for hit in results_approx.hits])
             true_positives = sum(x == y for x, y in zip(lst_ids_exact, lst_ids_approx))
             false_negatives = sum(x != y for x, y in zip(lst_ids_exact, lst_ids_approx))
             recall = true_positives / (true_positives + false_negatives)
