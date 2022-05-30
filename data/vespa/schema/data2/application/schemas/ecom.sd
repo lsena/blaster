@@ -32,7 +32,7 @@ schema ecom {
             }
             index {
                 hnsw {
-                    max-links-per-node: 32
+                    max-links-per-node: 12
                     neighbors-to-explore-at-insert: 500
                 }
             }

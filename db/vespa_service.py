@@ -14,7 +14,7 @@ def get_connection(hosts='http://vespa:8080') -> VespaAsync:
         cert = f'{get_settings().static_data_folder}/vespa/cert/client.pem'
         key = f'{get_settings().static_data_folder}/vespa/cert/client.key'
         # vespa_app = Vespa(url=hosts,cert=cert, key=key).asyncio(connections=120, total_timeout=50)
-        vespa_app = Vespa(url=hosts).asyncio(connections=120, total_timeout=50)
+        vespa_app = Vespa(url=hosts).asyncio(connections=200, total_timeout=50)
     return vespa_app
 
 

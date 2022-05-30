@@ -73,9 +73,9 @@ class VespaDataService(DataService):
             ts = time.time_ns()
             result = await VespaService.send_query(conn, index=self.index, body=query)
             query_latency.append(time.time_ns() - ts)
-            query_latency_from_server.append(result.json['timing']['querytime'] * 1000)
+            query_latency_from_server.append(result.json['timing']['querytime'])
         # return average (is ms) of all queries for each asyncio task
-        return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server))
+        return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server) * 1000)
 
     async def get_recall(self, slot, subslot, total_subslots, conn):
         await self.load_embeddings()
