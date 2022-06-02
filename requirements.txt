@@ -22,7 +22,7 @@ aioboto3==9.2.2
 # remove later or make optional
 pyroaring
 msgpack
-pyvespa==0.18.0
+pyvespa
 orjson
 azure-storage-blob
 requests

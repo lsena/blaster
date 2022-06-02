@@ -43,18 +43,12 @@ class ElasticsearchDataService(DataService):
     async def build_query(self, **query_opts):
         raise NotImplementedError
 
-    async def load_queries(self, query_nb, **query_opts):
-        self.queries = []
-        for _ in range(query_nb):
-            self.queries.append(await self.build_query(**query_opts))
-
     async def run_queries(self, slot, subslot, total_subslots, conn, query_nb, **query_opts):
-        query_latency = []
-        query_latency_from_server = []
-        for _ in range(query_nb):
-            body = await self.build_query(**query_opts)
+        query_latency = [0] * len(self.queries)
+        query_latency_from_server = [0] * len(self.queries)
+        for idx, query in enumerate(self.queries):
             ts = time.time_ns()
-            result = await ElasticsearchService.send_query(conn, index=self.index, body=body)
-            query_latency.append(time.time_ns() - ts)
-            query_latency_from_server.append(result['took'])
+            result = await ElasticsearchService.send_query(conn, index=self.index, body=query)
+            query_latency[idx] = time.time_ns() - ts
+            query_latency_from_server[idx] = result['took']
         return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server))

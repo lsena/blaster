@@ -75,16 +75,23 @@ class DataService():
         seed_file_words = await self.read_file(seed_file)
         self.seed_file_words_lst = seed_file_words.split('\n')
 
-    async def get_rnd_txt(self, limit, format):
+        seed_file = f'{get_settings().static_data_folder}/seed_fashion_en.txt'
+        seed_file_words = await self.read_file(seed_file)
+        self.seed_file_fashion_words_lst = seed_file_words.split('\n')
+
+    async def get_rnd_txt(self, limit, format, repo_name=None):
+        repo = self.seed_file_words_lst
+        if repo_name == 'fashion':
+            repo = self.seed_file_fashion_words_lst
         if format == 'string':
             result = ''
             for _ in range(limit):
-                result = f'{result} {random.choice(self.seed_file_words_lst)}'
+                result = f'{result} {random.choice(repo)}'
             return result.strip()
         else:
             result = []
             for _ in range(limit):
-                result.append(random.choice(self.seed_file_words_lst))
+                result.append(random.choice(repo))
         return result
 
     async def build_doc_file(self, doc_nb):
@@ -108,3 +115,8 @@ class DataService():
                 self.query_embeddings_lst = []
                 async for line in f:
                     self.query_embeddings_lst.append(orjson.loads(line))
+
+    async def load_queries(self, query_nb, **query_opts):
+        self.queries = []
+        for _ in range(query_nb):
+            self.queries.append(await self.build_query(**query_opts))

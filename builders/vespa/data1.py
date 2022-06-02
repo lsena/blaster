@@ -79,19 +79,21 @@ class VespaData1Builder(VespaDataService):
         if 'filter' in query_opts:
             qfilter = f'AND stock_size_10 >= {random.randint(0, 100)}'
         free_text_query = ''
-        if 'sparse' in query_opts: #TODO
-            free_text_str = ''
-            free_text_query = " or ([{'targetHits': 10}]weakAnd(productDisplayName contains '" + free_text_str + "')) )"
+        ranking_profile = 'semantic'
+        if 'sparse' in query_opts:
+            free_text_str = await self.get_rnd_txt(1, 'string', 'fashion')
+            free_text_query = "or ([{'targetHits': 10}]weakAnd(title contains '" + free_text_str + "'))"
+            ranking_profile = 'hybrid'
         embedding = random.choice(self.query_embeddings_lst)['embedding']
         approximate = 'true' if 'approximate' in query_opts else 'false'
-        yql = f"select id from sources {self.index} where ([{{'approximate':{approximate}, 'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding)) {qfilter};"
+        yql = f"select id from sources {self.index} where ([{{'approximate':{approximate}, 'targetHits': {page_size} }}]nearestNeighbor(embedding, query_embedding) {free_text_query}) {qfilter};"
         query = {
             "yql": yql,
             "hits": page_size,
             "presentation.timing": True,
             'presentation.summary': 'id',
             "ranking.features.query(query_embedding)": embedding,
-            "ranking.profile": "semantic",
+            "ranking.profile": ranking_profile,
             "timeout": 2000,
             "ranking.softtimeout.enable": False
         }

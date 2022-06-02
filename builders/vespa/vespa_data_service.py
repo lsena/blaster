@@ -50,30 +50,21 @@ class VespaDataService(DataService):
             if buffer:
                 await VespaService.bulk(conn, self.index, buffer)
 
-            # actions = await self.read_file(f'data/vespa/docs/{slot}/{file}')
-
-            # await VespaService.bulk(conn, self.index, orjson.loads(actions))
             query_latency.append(time.time_ns() - ts)
-        # await VespaService.close_connection(conn)
         return BenchmarkResult(mean(query_latency) / 1_000_000, 0)
 
     async def build_query(self, **query_opts):
         raise NotImplementedError
 
-    async def load_queries(self, query_nb, **query_opts):
-        self.queries = []
-        for _ in range(query_nb):
-            self.queries.append(await self.build_query(**query_opts))
-
     async def run_queries(self, slot, subslot, total_subslots, conn, **query_opts):
-        query_latency = []
-        query_latency_from_server = []
+        query_latency = [0] * len(self.queries)
+        query_latency_from_server = [0] * len(self.queries)
         await VespaService.open_connection(conn)
-        for query in self.queries:
+        for idx, query in enumerate(self.queries):
             ts = time.time_ns()
             result = await VespaService.send_query(conn, index=self.index, body=query)
-            query_latency.append(time.time_ns() - ts)
-            query_latency_from_server.append(result.json['timing']['querytime'])
+            query_latency[idx] = time.time_ns() - ts
+            query_latency_from_server[idx] = result.json['timing']['querytime']
         # return average (is ms) of all queries for each asyncio task
         return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server) * 1000)
 
@@ -85,7 +76,7 @@ class VespaDataService(DataService):
         query_latency_from_server = []
         for _ in range(200):
             ts = time.time_ns()
-            query = await self.build_query(approximate=False)
+            query = await self.build_query()
             results_exact = await VespaService.send_query(conn, index=self.index, body=query)
             lst_ids_exact = sorted([hit['id'] for hit in results_exact.hits])
             query['yql'] = query['yql'].replace("'approximate':false", "'approximate':true")
@@ -98,4 +89,8 @@ class VespaDataService(DataService):
             false_negatives = sum(x != y for x, y in zip(lst_ids_exact, lst_ids_approx))
             recall = true_positives / (true_positives + false_negatives)
             results.append(recall)
-        return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server), response={'recall': mean(results)})
+        return BenchmarkResult(
+            mean(query_latency) / 1_000_000,
+            mean(query_latency_from_server),
+            response={'recall': mean(results)}
+        )

@@ -1,58 +1,57 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!-- Copyright Yahoo. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root. -->
-<services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
-
-    <admin version='2.0'>
-        <adminserver hostalias="vespa0"/>
+<services version="1.0">
+    <admin version="2.0">
         <configservers>
-            <configserver hostalias="vespa0"/>
-            <configserver hostalias="vespa1"/>
-            <configserver hostalias="vespa2"/>
+            <configserver hostalias="node0"/>
         </configservers>
         <cluster-controllers>
-            <cluster-controller hostalias="vespa0"/>
-            <cluster-controller hostalias="vespa1"/>
-            <cluster-controller hostalias="vespa2"/>
+            <cluster-controller hostalias="node0"/>
         </cluster-controllers>
+        <slobroks>
+            <slobrok hostalias="node0"/>
+        </slobroks>
+        <adminserver hostalias="node0"/>
     </admin>
 
-    <container id="default" version="1.0">
-        <!--<jvm options="-Xms32M -Xmx512M"/>-->
-        <document-api/>
+    <container id="stateless-container-cluster" version="1.0">
         <search/>
+        <document-api/>
         <nodes>
-            <node hostalias="vespa0"/>
-            <node hostalias="vespa1"/>
-            <node hostalias="vespa2"/>
+            <jvm options="-Xms8g -Xmx8g"/>
+            <node hostalias="node1"/>
         </nodes>
-        <http>
-            <server id="default" port="8080"/>
-            <server id="ingress" port="8443">
-                <ssl>
-                    <private-key-file>/var/tls/host.key</private-key-file>
-                    <certificate-file>/var/tls/host.pem</certificate-file>
-                    <ca-certificates-file>/var/tls/ca-client.pem</ca-certificates-file>
-                    <client-authentication>need</client-authentication>
-                </ssl>
-            </server>
-        </http>
     </container>
-
     <content id="ecom" version="1.0">
-        <redundancy>3</redundancy>
+        <documents>
+            <document type="ecom" mode="index"></document>
+        </documents>
+        <redundancy>2</redundancy>
         <engine>
             <proton>
-                <searchable-copies>3</searchable-copies>
+                <tuning>
+                    <searchnode>
+                        <summary>
+                            <io>
+                                <read>directio</read>
+                            </io>
+                            <store>
+                                <cache>
+                                    <maxsize-percent>10</maxsize-percent>
+                                </cache>
+                            </store>
+                        </summary>
+                    </searchnode>
+                </tuning>
+                <searchable-copies>2</searchable-copies>
             </proton>
         </engine>
-        <documents>
-            <document type="ecom" mode="index"/>
-        </documents>
-        <nodes>
-            <node hostalias="vespa0" distribution-key="0"/>
-            <node hostalias="vespa1" distribution-key="1"/>
-            <node hostalias="vespa2" distribution-key="2"/>
-        </nodes>
+        <group>
+            <distribution partitions="1|*"/>
+            <group name="group0" distribution-key="0">
+                <node hostalias="node0" distribution-key="0"/>
+            </group>
+            <group name="group2" distribution-key="2">
+                <node hostalias="node2" distribution-key="2"/>
+            </group>
+        </group>
     </content>
-
 </services>
