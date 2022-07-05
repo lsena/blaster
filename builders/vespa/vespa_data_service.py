@@ -68,7 +68,7 @@ class VespaDataService(DataService):
         # return average (is ms) of all queries for each asyncio task
         return BenchmarkResult(mean(query_latency) / 1_000_000, mean(query_latency_from_server) * 1000)
 
-    async def get_recall(self, slot, subslot, total_subslots, conn):
+    async def get_recall(self, slot, subslot, total_subslots, conn, **query_opts):
         await self.load_embeddings()
         await VespaService.open_connection(conn)
         results = []
@@ -76,7 +76,7 @@ class VespaDataService(DataService):
         query_latency_from_server = []
         for _ in range(200):
             ts = time.time_ns()
-            query = await self.build_query()
+            query = await self.build_query(**query_opts)
             results_exact = await VespaService.send_query(conn, index=self.index, body=query)
             lst_ids_exact = sorted([hit['id'] for hit in results_exact.hits])
             query['yql'] = query['yql'].replace("'approximate':false", "'approximate':true")

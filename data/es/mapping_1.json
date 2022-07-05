@@ -118,6 +118,22 @@
               "ignore_above" : 256
             }
           }
+        },
+        "booster1a": {
+          "type": "rank_feature",
+          "positive_score_impact": true
+        },
+        "booster1b": {
+          "type": "rank_feature",
+          "positive_score_impact": true
+        },
+        "booster2a": {
+          "type": "float",
+          "doc_values": true
+        },
+        "booster2b": {
+          "type": "float",
+          "doc_values": true
         }
       }
   }

@@ -47,6 +47,14 @@ class ElasticsearchData1Builder(ElasticsearchDataService):
             for _ in range(10)
         ]
         doc_schema['greeting'] = await self.get_rnd_txt(random.randint(3, 10), 'string')
+
+        boost_score_a = random.uniform(0, 1)
+        boost_score_b = random.uniform(0, 1)
+        doc_schema['booster1a'] = boost_score_a
+        doc_schema['booster1b'] = boost_score_b
+        doc_schema['booster2a'] = boost_score_a
+        doc_schema['booster2b'] = boost_score_b
+
         action = {
             "_op_type": "update",  # TODO: benchmark VS normal index?
             "_index": self.index,
