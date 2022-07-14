@@ -110,11 +110,15 @@ class DataService():
         raise NotImplementedError
 
     async def load_embeddings(self):
-        if not hasattr(self, 'query_embeddings_lst'):
-            async with aiofiles.open(f'{get_settings().tmp_data_folder}/queries.json', mode='r') as f:
-                self.query_embeddings_lst = []
-                async for line in f:
-                    self.query_embeddings_lst.append(orjson.loads(line))
+        try:
+            if not hasattr(self, 'query_embeddings_lst'):
+                async with aiofiles.open(f'{get_settings().tmp_data_folder}/queries.json', mode='r') as f:
+                    self.query_embeddings_lst = []
+                    async for line in f:
+                        self.query_embeddings_lst.append(orjson.loads(line))
+
+        except Exception as ex:
+            print('error loading embeddings file')
 
     async def load_queries(self, query_nb, **query_opts):
         self.queries = []
