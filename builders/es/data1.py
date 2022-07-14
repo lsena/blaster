@@ -144,5 +144,53 @@ class ElasticsearchData1Builder(ElasticsearchDataService):
         # sort by nested value index
         # sort by nested value doc_values
         # sort by geo distance
+        if 'sort_fields' in query_opts:
+            sort_type = query_opts.get('sort_type', None)
+            sort_fields = query_opts['sort_fields'].split(',')
+            if sort_type == 'function_score':
+                score_func = '+'.join(f"doc['{field_name}'].value" for field_name in sort_fields)
+                query['query']['bool']['should'].append({
+                    "function_score": {
+                        "query": {
+                            "match_all": {}
+                        },
+                        "script_score": {
+                            "script": {
+                                "source": score_func
+                            }
+                        }
+                    }
+                })
+            elif sort_type == 'rank_feature':
+                rank_features = []
+                for idx, field_name in enumerate(reversed(sort_fields), 1):
+                    rank_features.append({
+                        "rank_feature": {
+                            "field": field_name,
+                            "boost": idx
+                        }
+                    })
+                query['query']['bool']['should'].extend(rank_features)
+            elif sort_type == 'field_value_factor':
+                score_func = []
+                for idx, field_name in enumerate(reversed(sort_fields), 1):
+                    score_func.append({
+                        "field_value_factor": {
+                            "field": field_name,
+                        }
+                    })
+                query['query']['bool']['should'].append({
+                    "function_score": {
+                        "query": {
+                            "match_all": {}
+                        },
+                        "functions": score_func
+                    }
+                })
+            else:  # default if sort
+                query['sort'] = [
+                    "_score",
+                    *sort_fields
+                ]
 
         return query
