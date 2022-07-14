@@ -71,7 +71,10 @@ async def process_sqs_msg(msg):
             func = builder.index_docs
         elif cmd == 'search':
             func = builder.run_queries
-            builder.add_init_job(builder.load_embeddings)
+            try:
+                builder.add_init_job(builder.load_embeddings)
+            except Exception as ex:
+                print('error loading embeddings file')
             builder.add_init_job(partial(builder.load_queries, **cmd_args))
         elif cmd == 'get_recall':
             func = builder.get_recall
