@@ -6,49 +6,53 @@ services:
       context: .
       dockerfile: python.Dockerfile
 #    command: python worker.py
-#    command: gunicorn -w 1 --bind 0.0.0.0:5000 worker:app
+#    command: gunicorn -w 3 --timeout 0 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 worker:app
     command: bash
     environment:
       PYTHONUNBUFFERED: 1
     volumes:
       - .:/code
+      - ./data:/tmpdir
     ports:
       - "5000:5000"
-    depends_on:
-      - vespa
-  vespa:
-    image: vespaengine/vespa:latest
-    hostname: vespa-container
-    privileged: true
-    volumes:
-      - ./data:/data
-      - ./deploy:/deploy
-    ports:
-      - 8080:8080
-      - 19050:19050
-      - 19071:19071
-      - 19112:19112
 #    depends_on:
-#      - es
-#  es:
-#    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.4
-#    environment:
-#      - cluster.name=docker-cluster
-#      - node.name=es
-#      - discovery.seed_hosts=es
-#      - cluster.initial_master_nodes=es
-#      - bootstrap.memory_lock=true
-#      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
-##    volumes:
-##      - ./build:/build
-#    ulimits:
-#      memlock:
-#        soft: -1
-#        hard: -1
+#      - vespa
+#  vespa:
+#    image: vespaengine/vespa:latest
+#    hostname: vespa-container
+#    privileged: true
+#    volumes:
+#      - ./data:/data
+#      - ./deploy:/deploy
 #    ports:
-#      - "9200:9200"
+#      - 8080:8080
+#      - 19050:19050
+#      - 19071:19071
+#      - 19112:19112
+    depends_on:
+      - es
+      - kibana
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.1
+    environment:
+      - cluster.name=docker-cluster
+      - node.name=es
+      - discovery.seed_hosts=es
+      - cluster.initial_master_nodes=es
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+#    volumes:
+#      - ./build:/build
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
 
-#  kibana:
-#    image: docker.elastic.co/kibana/kibana:7.13.4
-#    ports:
-#      - "5601:5601"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.1
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+    ports:
+      - "5601:5601"
