@@ -10,6 +10,7 @@ from builders.es.data1 import ElasticsearchData1Builder
 from builders.es.data2 import ElasticsearchData2Builder
 from builders.es.data3 import ElasticsearchData3Builder
 from builders.es.data4 import ElasticsearchData4Builder
+from builders.es.data5 import ElasticsearchData5Builder
 from builders.vespa.data1 import VespaData1Builder
 from processor import start_processors
 from utils import get_settings, download_remote_data, poll_sqs_queue
@@ -47,11 +48,14 @@ async def process_sqs_msg(msg):
             'es_3': ElasticsearchData3Builder.new(index='index3'),
             'es_4': ElasticsearchData4Builder.new(index='index4',
                                                   data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
+            'es_5': ElasticsearchData5Builder.new(index='index5'),
             'vespa_1': VespaData1Builder.new(index='ecom', data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
         }
         builder = profiles.get(f'{engine}_{profile}', None)
         if not builder:
-            return
+            return {
+                "invalid request"
+            }
         else:
             builder = await builder
 
