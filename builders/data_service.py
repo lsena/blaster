@@ -52,10 +52,11 @@ class DataService():
 
     async def generate_id(self, format='uuid4'):
         # TODO: lucene friendly formats
-        ts = int(time.time_ns() / 1000)
         if format == 'int':
-            return int(f"{str(ts)}{random.randint(0,1000)}")
+            # TODO: return monotonically
+            return int(f"{str(time.time_ns())[9:-4]}{random.randint(0,1000)}")
         else:
+            ts = int(time.time_ns() / 1000)
             return f"{str(ts)}{self.generate_random_base64(3)}"
 
     async def read_file(self, file_path):
