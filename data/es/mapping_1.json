@@ -134,6 +134,10 @@
         "booster2b": {
           "type": "float",
           "doc_values": true
+        },
+        "doc_id" : {
+          "type" : "integer",
+          "doc_values": true
         }
       }
   }
