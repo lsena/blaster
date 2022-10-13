@@ -54,7 +54,7 @@ class DataService():
         # TODO: lucene friendly formats
         if format == 'int':
             # TODO: return monotonically
-            return int(f"{str(time.time_ns())[9:-4]}{random.randint(0,1000)}")
+            return int(f"1{str(time.time_ns())[8:-5]}{random.randint(0,1000)}")
         else:
             ts = int(time.time_ns() / 1000)
             return f"{str(ts)}{self.generate_random_base64(3)}"
