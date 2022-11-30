@@ -18,7 +18,7 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
         doc_schema = {}
         doc_schema['idx'] = idx
         doc_schema['guid'] = str(uuid.uuid4())
-        doc_schema['filter_id'] = random.randint(1, 2000000000)
+        doc_schema['filter_id'] = random.randint(1, 100000000)
         doc_schema['important_field'] = await self.get_rnd_txt(2, 'string')
 
         action = {
@@ -44,8 +44,13 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
 
     async def build_query(self, **query_opts):
         field = 'filter_id'
-        operation = ''
-        terms_array = [random.randint(1, 2000000000) for _ in range(10000)]
+        operation = 'include'
+        size = 1000
+        if 'operation' in query_opts:
+            operation = query_opts['operation']
+        if 'size' in query_opts:
+            size = int(query_opts['size'])
+        terms_array = [random.randint(1, 100000000) for _ in range(size)]
         query = {
             "query": {
                 "bool": {
