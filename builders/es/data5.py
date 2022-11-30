@@ -200,8 +200,9 @@ class ElasticsearchData5Builder(ElasticsearchDataService):
                     *sort_fields
                 ]
         if 'rescore' in query_opts:
+            rescore_window = query_opts.get('rescore', None)
             query['rescore'] = {
-                "window_size": 100,
+                "window_size": rescore_window,
                 "live_rescorer": {
                     "key": "test",
                     "prefix_field_name": "prefix",

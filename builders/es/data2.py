@@ -43,33 +43,32 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
         await self.write_file(f'{dir_path}/{file_name}', actions)
 
     async def build_query(self, **query_opts):
-        field = ''
+        field = 'filter_id'
         operation = ''
-        terms = base64.b64encode(BitMap.serialize(BitMap([random.randint(1, 2000000000) for _ in range(10000)])))
+        terms_array = [random.randint(1, 2000000000) for _ in range(10000)]
         query = {
             "query": {
                 "bool": {
-                    # "must": [
-                    #     {
-                    #         "match": {
-                    #             "important_field": "foo"
-                    #         }
-                    #     }
-                    # ],
                     "filter": {
-                        "script": {
-                            "script": {
-                                "source": "fast_filter",
-                                "lang": "fast_filter",
-                                "params": {
-                                    "field": f"{field}",
-                                    "operation": f"{operation}",
-                                    "terms": f"{terms}"
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
+        if "bitmap" in query_opts:
+            terms = base64.b64encode(BitMap.serialize(BitMap(terms_array))).decode('utf-8')
+            query["query"]["bool"]["filter"]["script"] = {
+                "script": {
+                    "source": "fast_filter",
+                    "lang": "fast_filter",
+                    "params": {
+                        "field": f"{field}",
+                        "operation": f"{operation}",
+                        "terms": f"{terms}"
+                    }
+                }
+            }
+        else:  # test https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-terms-set-query.html
+            query["query"]["bool"]["filter"]["terms"] = {
+                field: terms_array
+            }
         return query
