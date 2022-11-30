@@ -5,9 +5,9 @@ services:
     build:
       context: .
       dockerfile: python.Dockerfile
-    command: python worker.py
+#    command: python worker.py
 #    command: gunicorn -w 3 --timeout 0 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 worker:app
-    #command: bash
+    command: bash
     environment:
       PYTHONUNBUFFERED: 1
     volumes:
@@ -15,23 +15,6 @@ services:
       - ./data:/tmpdir
     ports:
       - "5000:5000"
-    depends_on:
-      - es
-      - kibana
-      - api
-  api:
-    build:
-      context: .
-      dockerfile: python.Dockerfile
-#    command: python worker.py
-    command: gunicorn -w 2 --timeout 0 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:3000 api:app
-    environment:
-      PYTHONUNBUFFERED: 1
-    volumes:
-      - .:/code
-      - ./data:/tmpdir
-    ports:
-      - "3000:3000"
 #    depends_on:
 #      - vespa
 #  vespa:
@@ -46,9 +29,16 @@ services:
 #      - 19050:19050
 #      - 19071:19071
 #      - 19112:19112
+    depends_on:
+      - es
+      - kibana
+
+# for windows
+# wsl -d docker-desktop
+# for windows and linux
+# sysctl -w vm.max_map_count=262144
   es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
-    # bin/elasticsearch-plugin install file:/build/multi-index-rescore-1.0-SNAPSHOT.zip
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.6
     environment:
       - cluster.name=docker-cluster
       - node.name=es
@@ -56,8 +46,8 @@ services:
       - cluster.initial_master_nodes=es
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
-    volumes:
-      - ./build:/build
+#    volumes:
+#      - ./build:/build
     ulimits:
       memlock:
         soft: -1
@@ -66,7 +56,7 @@ services:
       - "9200:9200"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.7
+    image: docker.elastic.co/kibana/kibana:7.17.6
     environment:
       - ELASTICSEARCH_HOSTS=http://es:9200
     ports:

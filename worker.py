@@ -11,6 +11,7 @@ from builders.es.data2 import ElasticsearchData2Builder
 from builders.es.data3 import ElasticsearchData3Builder
 from builders.es.data4 import ElasticsearchData4Builder
 from builders.es.data5 import ElasticsearchData5Builder
+from builders.es.data6 import ElasticsearchData6Builder
 from builders.vespa.data1 import VespaData1Builder
 from processor import start_processors
 from utils import get_settings, download_remote_data, poll_sqs_queue
@@ -29,9 +30,9 @@ async def process_sqs_msg(msg):
             message = msg
 
         cmd = message['cmd']  # search,index,create
-        cmd_args = None
+        cmd_args = {}
         try:
-            cmd_args = json.loads(message['cmd_args'])  # {'doc_nb': 1000}
+            cmd_args = json.loads(message['cmd_args'])  # {\"doc_nb\": 1000}
         except:
             pass
         max_workers = message['max_workers']  # -1,2,3,...
@@ -49,6 +50,7 @@ async def process_sqs_msg(msg):
             'es_4': ElasticsearchData4Builder.new(index='index4',
                                                   data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
             'es_5': ElasticsearchData5Builder.new(index='index5'),
+            'es_6': ElasticsearchData6Builder.new(index='index6'),
             'vespa_1': VespaData1Builder.new(index='ecom', data_file=f'{get_settings().tmp_data_folder}/vectors.zip'),
         }
         builder = profiles.get(f'{engine}_{profile}', None)

@@ -52,8 +52,12 @@ class DataService():
 
     async def generate_id(self, format='uuid4'):
         # TODO: lucene friendly formats
-        ts = int(time.time_ns() / 1000)
-        return f"{str(ts)}{self.generate_random_base64(3)}"
+        if format == 'int':
+            # TODO: return monotonically
+            return int(f"1{str(time.time_ns())[8:-5]}{random.randint(0,999)}")
+        else:
+            ts = int(time.time_ns() / 1000)
+            return f"{str(ts)}{self.generate_random_base64(3)}"
 
     async def read_file(self, file_path):
         async with aiofiles.open(file_path, mode='r') as f:
