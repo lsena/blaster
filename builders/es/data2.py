@@ -43,15 +43,18 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
         await self.write_file(f'{dir_path}/{file_name}', actions)
 
     async def build_query(self, **query_opts):
-        field = 'filter_id'
+        field = 'idx'
         operation = 'include'
         size = 1000
         if 'operation' in query_opts:
             operation = query_opts['operation']
         if 'size' in query_opts:
             size = int(query_opts['size'])
-        terms_array = [random.randint(1, 100000000) for _ in range(size)]
+        start_id = random.randint(1, 1000000)
+        terms_array = [start_id + idx for idx in range(size)]
         query = {
+            "stored_fields": "_none_",
+            "docvalue_fields": [field],
             "query": {
                 "bool": {
                     "filter": {

@@ -5,7 +5,16 @@
   "mappings": {
     "properties": {
       "important_field": { "type": "text" },
-      "filter_id": { "type": "integer", "doc_values": true }
+      "guid": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+      "idx": { "type": "idx", "doc_values": true},
+      "filter_id": { "type": "integer", "doc_values": true}
     }
   }
 }
