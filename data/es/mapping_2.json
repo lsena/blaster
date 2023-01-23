@@ -13,7 +13,8 @@
             }
           }
         },
-      "idx": { "type": "idx", "doc_values": true},
+      "idx": { "type": "integer", "doc_values": true},
+      "idx_str": { "type": "keyword", "doc_values": true},
       "filter_id": { "type": "integer", "doc_values": true}
     }
   }

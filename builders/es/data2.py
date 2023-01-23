@@ -17,6 +17,7 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
     async def generate_docs(self, idx):
         doc_schema = {}
         doc_schema['idx'] = idx
+        doc_schema['idx_str'] = str(idx)
         doc_schema['guid'] = str(uuid.uuid4())
         doc_schema['filter_id'] = random.randint(1, 100000000)
         doc_schema['important_field'] = await self.get_rnd_txt(2, 'string')
@@ -44,6 +45,9 @@ class ElasticsearchData2Builder(ElasticsearchDataService):
 
     async def build_query(self, **query_opts):
         field = 'idx'
+        if 'field' in query_opts:
+            field = query_opts['field']
+
         operation = 'include'
         size = 1000
         if 'operation' in query_opts:
