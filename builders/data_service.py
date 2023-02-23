@@ -101,7 +101,7 @@ class DataService():
     async def build_doc_file(self, doc_nb):
         raise NotImplementedError
 
-    async def create_index(self, slot, subslot, total_subslots, conn):
+    async def create_index(self, slot, subslot, total_subslots, conn, **kwargs):
         raise NotImplementedError
 
     async def index_docs(self, slot, subslot, total_subslots, conn):

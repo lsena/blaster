@@ -13,8 +13,11 @@ from utils import get_settings
 
 class ElasticsearchDataService(DataService):
 
-    async def create_index(self, slot, subslot, total_subslots, conn):
-        await ElasticsearchService.create_index(conn, self.index, await self.read_file(self.mapping_path))
+    async def create_index(self, slot, subslot, total_subslots, conn, **kwargs):
+        number_of_shards = kwargs.get('number_of_shards', 1)
+        mapping = await self.read_file(self.mapping_path)
+        mapping.replace('<number_of_shards>', number_of_shards)
+        await ElasticsearchService.create_index(conn, self.index, mapping=mapping)
         return BenchmarkResult()
 
     async def index_docs(self, slot, subslot, total_subslots, conn):

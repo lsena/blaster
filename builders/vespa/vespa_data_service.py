@@ -12,7 +12,7 @@ from utils import get_settings
 
 
 class VespaDataService(DataService):
-    async def create_index(self, slot, subslot, total_subslots, conn):
+    async def create_index(self, slot, subslot, total_subslots, conn, **kwargs):
         await VespaService.open_connection(conn)
         dest_path = f'{get_settings().tmp_data_folder}/application'
         ext = 'zip'

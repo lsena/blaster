@@ -1,6 +1,6 @@
 {
   "settings": {
-    "number_of_shards": 1,
+    "number_of_shards": <number_of_shards>,
     "index.requests.cache.enable": false,
     "number_of_replicas": 0
   },

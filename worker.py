@@ -74,7 +74,7 @@ async def process_sqs_msg(msg):
             func = builder.create_index
             concurrency = 1
         elif cmd == 'index_docs':
-            func = builder.index_docs
+            func = partial(builder.index_docs, **cmd_args)
         elif cmd == 'search':
             func = builder.run_queries
             builder.add_init_job(builder.load_embeddings)
